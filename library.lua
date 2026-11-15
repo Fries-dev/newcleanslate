@@ -1,6 +1,3 @@
--- REASON: Dumbass customer put their library in a request and flexed his non existant security and ended up getting it leaked by himself... 😭
--- The code here is horrendous this is my 2nd library, the added on code was made to suit the old code however I should have just converted to a newer version of my code kind of an oopsie. 
-
 -- variables
 	local uis = cloneref(game:GetService("UserInputService"))
 	local players = cloneref(game:GetService("Players"))
@@ -16,6 +13,21 @@
 	local sound_service = cloneref(game:GetService("SoundService"))
 	local starter_gui = cloneref(game:GetService("StarterGui"))
 	local rs = cloneref(game:GetService("ReplicatedStorage"))
+
+	-- gethui fallback (must be after coregui)
+	local gethui = gethui or function() return coregui end
+
+	-- undetected gui (only one copy of this should exist in the file)
+	local function CreateUndetectedGui(name)
+		local gui = Instance.new("ScreenGui")
+		gui.Name = " "
+		gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+		gui.IgnoreGuiInset = true
+		gui.ResetOnSpawn = false
+		gui.DisplayOrder = 999999
+		gui.Parent = gethui()
+		return gui
+	end
 
 	local vec2 = Vector2.new
 	local vec3 = Vector3.new
@@ -65,16 +77,7 @@
 	local find = table.find 
 	local remove = table.remove
 	local concat = table.concat
-	local function CreateUndetectedGui(name)
-		local gui = Instance.new("ScreenGui")
-		gui.Name = " "
-		gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
-		gui.IgnoreGuiInset = true
-		gui.ResetOnSpawn = false
-		gui.DisplayOrder = 999999
-		gui.Parent = gethuiFn()
-		return gui
-	end
+--
 
 -- library init
 	local library = {
@@ -169,7 +172,6 @@
 			["ScrollingFrame"] = "ScrollBarImageColor3"
 		}
 	}
-
 	local keys = {
 		[Enum.KeyCode.LeftShift] = "LS",
 		[Enum.KeyCode.RightShift] = "RS",
