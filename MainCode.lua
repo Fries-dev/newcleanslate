@@ -20,7 +20,7 @@ local SETTINGS = {
     Zoom = { Enabled = false, Amount = 30, AnimationSpeed = 8 },
     player = { Enabled = false}
 }
-local Dunzo = loadstring(game:HttpGet('https://raw.githubusercontent.com/GhostDuckyy/ESP-Library/refs/heads/main/Sense/source.lua'))()
+local Sense = loadstring(game:HttpGet('https://raw.githubusercontent.com/GhostDuckyy/ESP-Library/refs/heads/main/Sense/source.lua'))()
 
 local success, config = pcall(function()
     local chunk, err = loadstring(game:HttpGet('https://raw.githubusercontent.com/Fries-dev/newcleanslate/refs/heads/main/MainProp.lua'))
@@ -39,7 +39,7 @@ if success and type(config) == "table" then
         end
     end
 
-    applySettings(Dunzo, config)
+    applySettings(Sense, config)
     print("Config applied successfully!")
 else
     warn("Failed to load config from GitHub. Error: ", config)
