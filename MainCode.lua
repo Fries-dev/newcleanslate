@@ -22,7 +22,7 @@ local SETTINGS = {
 }
 local Sense = loadstring(game:HttpGet('https://raw.githubusercontent.com/GhostDuckyy/ESP-Library/refs/heads/main/Sense/source.lua'))()
 local success, config = pcall(function()
-    return loadstring(game:HttpGet('https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/config.lua'))()
+    return loadstring(game:HttpGet('https://raw.githubusercontent.com/Fries-dev/newcleanslate/refs/heads/main/MainProp.lua'))()
 end)
 
 if success and config then
