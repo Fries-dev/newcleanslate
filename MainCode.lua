@@ -20,13 +20,15 @@ local SETTINGS = {
     Zoom = { Enabled = false, Amount = 30, AnimationSpeed = 8 },
     player = { Enabled = false}
 }
-local Sense = loadstring(game:HttpGet('https://raw.githubusercontent.com/GhostDuckyy/ESP-Library/refs/heads/main/Sense/source.lua'))()
+local Dunzo = loadstring(game:HttpGet('https://raw.githubusercontent.com/GhostDuckyy/ESP-Library/refs/heads/main/Sense/source.lua'))()
+
 local success, config = pcall(function()
-    return loadstring(game:HttpGet('https://raw.githubusercontent.com/Fries-dev/newcleanslate/refs/heads/main/MainProp.lua'))()
+    local chunk, err = loadstring(game:HttpGet('https://raw.githubusercontent.com/Fries-dev/newcleanslate/refs/heads/main/MainProp.lua'))
+    if not chunk then error(err) end
+    return chunk()
 end)
 
-if success and config then
-    -- A recursive function to apply the settings automatically
+if success and type(config) == "table" then
     local function applySettings(target, source)
         for k, v in pairs(source) do
             if type(v) == "table" and type(target[k]) == "table" then
@@ -37,10 +39,10 @@ if success and config then
         end
     end
 
-    -- Apply everything from the GitHub config
-    applySettings(Sense, config)
+    applySettings(Dunzo, config)
+    print("Config applied successfully!")
 else
-    warn("Failed to load config from GitHub.")
+    warn("Failed to load config from GitHub. Error: ", config)
 end
 
 local Library, Themes = loadstring(game:HttpGet("https://raw.githubusercontent.com/i77lhm/Libraries/refs/heads/main/Atlanta/Library.lua"))()
