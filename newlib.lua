@@ -1777,6 +1777,11 @@
 					section:button({name = "Unload Menu", callback = function()
 						library:load_config(library.old_config)
 
+						-- 1. Destroy your custom watermark GUI explicitly
+						pcall(function()
+							watermark.destroy()
+						end)
+
 						for _, gui in library.guis do 
 							gui:Destroy() 
 						end 
