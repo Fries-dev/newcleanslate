@@ -320,21 +320,29 @@ library:game_selector({
 
         if gameData.id == 6872265039 then
             print("Running BedWars script features...")
-            -- This fetches and runs the code from your external GitHub file
-            local success, err = pcall(function()
-                loadstring(game:HttpGet("https://raw.githubusercontent.com/Fries-dev/newcleanslate/refs/heads/main/universal.lua"))()
+            
+            -- Safely fetch the code from the URL
+            local success, body = pcall(function()
+                return game:HttpGet("https://raw.githubusercontent.com/Fries-dev/newcleanslate/refs/heads/main/universal.lua")
             end)
-            if not success then
-                warn("Failed to load BedWars script:", err)
+            
+            if success and body then
+                -- Try to compile the downloaded code into a function
+                local fn, syntaxErr = loadstring(body)
+                if fn then
+                    fn() -- Run the script successfully
+                else
+                    warn("Syntax error in external script:", syntaxErr)
+                end
+            else
+                warn("Failed to HTTP Get the script URL:", body)
             end
             
         elseif gameData.id == 2753915549 then
             print("Running Blox Fruits script features...")
-            -- Put your Blox Fruits raw GitHub link here later
             
         elseif gameData.name == "Arsenal" then
             print("Running Arsenal script features...")
-            -- Put your Arsenal raw GitHub link here later
         end
     end
 })
