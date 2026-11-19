@@ -73,11 +73,12 @@ local window = library:window({
 })
 
 local watermark = library:custom_watermark({
-    prefix = hub_name,
+    tag = "admin",       -- Change to "dev" if you prefer
     suffix = "client",
-    info = "loading...",
-    position = UDim2.new(0, 20, 0, 20)
+    position = UDim2.new(0, 20, 0, 60)
 })
+
+
 local Aiming = window:tab({name = "Aiming"})
 local Visuals = window:tab({name = "Visuals"})
 local Misc = window:tab({name = "Misc"})
@@ -160,13 +161,17 @@ RunService.RenderStepped:Connect(function()
         ping = math.round(LocalPlayer:GetNetworkPing() * 1000)
     end)
 
+    -- Format: username | fps | ping | tag | time
+    local currentTime = os.date("%H:%M:%S")
+    local tagStatus = "admin" -- matches your tag
+
     watermark.change_info(string.format(
-        "%s | %d fps | %dms | %d/%d",
+        "%s | %d fps | %dms | %s | %s",
         LocalPlayer.Name,
         fps,
         ping,
-        #Players:GetPlayers(),
-        Players.MaxPlayers
+        tagStatus,
+        currentTime
     ))
 end)
 -- Visuals Tab Setup (Dynamic ESP Settings & Model Transformer)
