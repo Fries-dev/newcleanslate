@@ -1775,30 +1775,38 @@
 						library:load_config(library.old_config)
 					end})
 					section:button({name = "Unload Menu", callback = function()
-						print("[DEBUG] Unload button clicked!")
 						library:load_config(library.old_config)
 
-						-- Bulletproof manual cleanup with console prints
+						-- Universal cleanup: destroys any ScreenGui containing "WatermarkGui"
 						pcall(function()
-							local foundWatermark = false
 							for _, gui in ipairs(game:GetService("CoreGui"):GetChildren()) do
-								if gui.Name == "EtherWatermarkGui" then
+								if gui.Name:match("WatermarkGui") then
 									gui:Destroy()
-									foundWatermark = true
-									print("[DEBUG] Successfully destroyed EtherWatermarkGui from CoreGui!")
 								end
 							end
 							for _, gui in ipairs(game:GetService("Players").LocalPlayer.PlayerGui:GetChildren()) do
-								if gui.Name == "EtherWatermarkGui" then
+								if gui.Name:match("WatermarkGui") then
 									gui:Destroy()
-									foundWatermark = true
-									print("[DEBUG] Successfully destroyed EtherWatermarkGui from PlayerGui!")
 								end
 							end
-							if not foundWatermark then
-								print("[DEBUG] Warning: EtherWatermarkGui was not found in CoreGui or PlayerGui during unload.")
-							end
 						end)
+
+						for _, gui in library.guis do 
+							if gui and gui.Parent then
+								gui:Destroy() 
+							end
+						end 
+
+						for _, connection in library.connections do 
+							if connection and connection.Connected then
+								connection:Disconnect() 
+							end
+						end
+
+						if blur then
+							blur:Destroy()
+						end
+					end})
 
 						for _, gui in library.guis do 
 							if gui and gui.Parent then
@@ -1858,15 +1866,15 @@
 		end
 		function library:custom_watermark(options)
 			local cfg = {
-				script_name = options.script_name or "ether",
+				script_name = options.script_name or "my_script",
 				suffix = options.suffix or "client",
-				role = options.role or "admin",
+				role = options.role + "" or "admin",
 				role_color = options.role_color or "00FF7F"
 			}
 
-			-- Completely separate ScreenGui so the library's config system ignores it
+			-- Dynamically name the ScreenGui using your script_name
 			local watermark_sgui = Instance.new("ScreenGui")
-			watermark_sgui.Name = "EtherWatermarkGui"
+			watermark_sgui.Name = cfg.script_name .. "WatermarkGui"
 			watermark_sgui.ResetOnSpawn = false
 			watermark_sgui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
@@ -1881,7 +1889,6 @@
 				return string.format('  %s<font color="#%s">%s</font>  ', pre, themes.preset.accent:ToHex(), suf)
 			end
 
-			-- Use standard Instance.new to bypass library tracking/config loops entirely
 			local watermark_outline = Instance.new("Frame")
 			watermark_outline.Parent = watermark_sgui
 			watermark_outline.Name = "CustomWatermark"
