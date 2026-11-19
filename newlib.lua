@@ -1833,7 +1833,7 @@
 				role_color = options.role_color or "00FF7F"
 			}
 
-			-- Create an independent ScreenGui so the library's config loop ignores it entirely
+			-- Completely separate ScreenGui so the library's config system ignores it
 			local watermark_sgui = Instance.new("ScreenGui")
 			watermark_sgui.Name = "EtherWatermarkGui"
 			watermark_sgui.ResetOnSpawn = false
@@ -1850,93 +1850,88 @@
 				return string.format('  %s<font color="#%s">%s</font>  ', pre, themes.preset.accent:ToHex(), suf)
 			end
 
-			local watermark_outline = library:create("Frame", {
-				Parent = watermark_sgui,
-				Name = "CustomWatermark",
-				BorderColor3 = Color3.fromRGB(0, 0, 0),
-				Position = options.position or UDim2.new(0, 20, 0, 60),
-				Size = UDim2.new(0, 0, 0, 42),
-				BorderSizePixel = 0,
-				AutomaticSize = Enum.AutomaticSize.X,
-				BackgroundColor3 = themes.preset.outline,
-				Visible = true,
-				ZIndex = 999
-			})
-			library:apply_theme(watermark_outline, "outline", "BackgroundColor3")
+			-- Use standard Instance.new to bypass library tracking/config loops entirely
+			local watermark_outline = Instance.new("Frame")
+			watermark_outline.Parent = watermark_sgui
+			watermark_outline.Name = "CustomWatermark"
+			watermark_outline.BorderColor3 = Color3.fromRGB(0, 0, 0)
+			watermark_outline.Position = options.position or UDim2.new(0, 20, 0, 60)
+			watermark_outline.Size = UDim2.new(0, 0, 0, 42)
+			watermark_outline.BorderSizePixel = 0
+			watermark_outline.AutomaticSize = Enum.AutomaticSize.X
+			watermark_outline.BackgroundColor3 = themes.preset.outline or Color3.fromRGB(35, 35, 47)
+			watermark_outline.Visible = true
+			watermark_outline.ZIndex = 999
+
 			if library.draggify then library:draggify(watermark_outline) end
 
-			local watermark_inline = library:create("Frame", {
-				Parent = watermark_outline,
-				Position = UDim2.new(0, 1, 0, 1),
-				Size = UDim2.new(1, -2, 1, -2),
-				BorderSizePixel = 0,
-				BackgroundColor3 = themes.preset.inline
-			})
-			library:apply_theme(watermark_inline, "inline", "BackgroundColor3")
+			local watermark_inline = Instance.new("Frame")
+			watermark_inline.Parent = watermark_outline
+			watermark_inline.Position = UDim2.new(0, 1, 0, 1)
+			watermark_inline.Size = UDim2.new(1, -2, 1, -2)
+			watermark_inline.BorderSizePixel = 0
+			watermark_inline.BackgroundColor3 = themes.preset.inline or Color3.fromRGB(20, 20, 25)
 
-			local watermark_background = library:create("Frame", {
-				Parent = watermark_inline,
-				Position = UDim2.new(0, 1, 0, 1),
-				Size = UDim2.new(1, -2, 1, -2),
-				BorderSizePixel = 0,
-				BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+			local watermark_background = Instance.new("Frame")
+			watermark_background.Parent = watermark_inline
+			watermark_background.Position = UDim2.new(0, 1, 0, 1)
+			watermark_background.Size = UDim2.new(1, -2, 1, -2)
+			watermark_background.BorderSizePixel = 0
+			watermark_background.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+
+			local uiGradient = Instance.new("UIGradient")
+			uiGradient.Parent = watermark_background
+			uiGradient.Rotation = 90
+			uiGradient.Color = ColorSequence.new({
+				ColorSequenceKeypoint.new(0, Color3.fromRGB(41, 41, 55)),
+				ColorSequenceKeypoint.new(1, Color3.fromRGB(35, 35, 47))
 			})
 
-			local UIGradient = library:create("UIGradient", {
-				Parent = watermark_background,
-				Rotation = 90,
-				Color = ColorSequence.new({
-					ColorSequenceKeypoint.new(0, Color3.fromRGB(41, 41, 55)),
-					ColorSequenceKeypoint.new(1, Color3.fromRGB(35, 35, 47))
-				})
-			})
-			library:apply_theme(UIGradient, "contrast", "Color")
+			local title_text = Instance.new("TextLabel")
+			title_text.Parent = watermark_background
+			title_text.FontFace = library.font or Font.new("rbxasset://fonts/families/SourceSansPro.json")
+			title_text.TextColor3 = themes.preset.text or Color3.fromRGB(255, 255, 255)
+			title_text.Text = format_title(cfg.script_name, cfg.suffix)
+			title_text.Size = UDim2.new(0, 0, 0, 18)
+			title_text.BackgroundTransparency = 1
+			title_text.Position = UDim2.new(0, -1, 0, 1)
+			title_text.AutomaticSize = Enum.AutomaticSize.X
+			title_text.TextSize = 12
+			title_text.RichText = true
 
-			local title_text = library:create("TextLabel", {
-				Parent = watermark_background,
-				FontFace = library.font,
-				TextColor3 = themes.preset.text,
-				Text = format_title(cfg.script_name, cfg.suffix),
-				Size = UDim2.new(0, 0, 0, 18),
-				BackgroundTransparency = 1,
-				Position = UDim2.new(0, -1, 0, 1),
-				AutomaticSize = Enum.AutomaticSize.X,
-				TextSize = 12,
-				RichText = true
-			})
-			library:create("UIStroke", { Parent = title_text, LineJoinMode = Enum.LineJoinMode.Miter })
+			local titleStroke = Instance.new("UIStroke")
+			titleStroke.Parent = title_text
+			titleStroke.LineJoinMode = Enum.LineJoinMode.Miter
 
-			local divider = library:create("Frame", {
-				Parent = watermark_outline,
-				Position = UDim2.new(0, 2, 0, 20),
-				Size = UDim2.new(1, -4, 0, 1),
-				BorderSizePixel = 0,
-				BackgroundColor3 = themes.preset.accent
-			})
-			library:apply_theme(divider, "accent", "BackgroundColor3")
+			local divider = Instance.new("Frame")
+			divider.Parent = watermark_outline
+			divider.Position = UDim2.new(0, 2, 0, 20)
+			divider.Size = UDim2.new(1, -4, 0, 1)
+			divider.BorderSizePixel = 0
+			divider.BackgroundColor3 = themes.preset.accent or Color3.fromRGB(0, 255, 127)
 
-			local info_text = library:create("TextLabel", {
-				Parent = watermark_background,
-				FontFace = library.font,
-				TextColor3 = themes.preset.text,
-				Text = "  loading...  ",
-				Size = UDim2.new(0, 0, 0, 18),
-				BackgroundTransparency = 1,
-				Position = UDim2.new(0, -1, 0, 21),
-				AutomaticSize = Enum.AutomaticSize.X,
-				TextSize = 11,
-				RichText = true
-			})
-			library:create("UIStroke", { Parent = info_text, LineJoinMode = Enum.LineJoinMode.Miter })
+			local info_text = Instance.new("TextLabel")
+			info_text.Parent = watermark_background
+			info_text.FontFace = library.font or Font.new("rbxasset://fonts/families/SourceSansPro.json")
+			info_text.TextColor3 = themes.preset.text or Color3.fromRGB(255, 255, 255)
+			info_text.Text = "  loading...  "
+			info_text.Size = UDim2.new(0, 0, 0, 18)
+			info_text.BackgroundTransparency = 1
+			info_text.Position = UDim2.new(0, -1, 0, 21)
+			info_text.AutomaticSize = Enum.AutomaticSize.X
+			info_text.TextSize = 11
+			info_text.RichText = true
 
-			local accent = library:create("Frame", {
-				Parent = watermark_outline,
-				Position = UDim2.new(0, 2, 0, 2),
-				Size = UDim2.new(1, -4, 0, 2),
-				BorderSizePixel = 0,
-				BackgroundColor3 = themes.preset.accent
-			})
-			library:apply_theme(accent, "accent", "BackgroundColor3")
+			local infoStroke = Instance.new("UIStroke")
+			infoStroke.Parent = info_text
+			infoStroke.LineJoinMode = Enum.LineJoinMode.Miter
+
+			local accent = Instance.new("Frame")
+			accent.Parent = watermark_outline
+			accent.Position = UDim2.new(0, 2, 0, 2)
+			accent.Size = UDim2.new(1, -4, 0, 2)
+			accent.BorderSizePixel = 0
+			accent.BackgroundColor3 = themes.preset.accent or Color3.fromRGB(0, 255, 127)
 
 			function cfg.change_info(input)
 				info_text.Text = "  " .. tostring(input) .. "  "
