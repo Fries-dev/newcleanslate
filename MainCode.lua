@@ -7,44 +7,24 @@ local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 local Camera = Workspace.CurrentCamera
 local Client = Players.LocalPlayer
+local target = nil
+local dim2 = UDim2.new
+local hex = Color3.fromHex 
 
 local zoomKeyActive = false
-local thirdPersonActive = false
-local cameraDistance = 15
 
 local SETTINGS = {
     Fov = { Enabled = false, Amount = 70, Base = Camera.FieldOfView },
     Zoom = { Enabled = false, Amount = 30, AnimationSpeed = 8 },
     player = { Enabled = false },
-    teamSettings = {
-        enemy = {
-            enabled = true,
-            box = true,
-            boxColor = { Color3.new(1, 0, 0), 1 },
-            boxOutline = true,
-            boxOutlineColor = { Color3.new(0, 0, 0), 1 },
-            boxFill = true,
-            boxFillColor = { Color3.new(1, 0, 0), 0.5 },
-            healthBar = true,
-            healthBarOutline = true,
-            name = true,
-            nameOutline = true,
-            tracer = false,
-            tracerOutline = false,
-            weapon = false,
-            weaponOutline = false,
-            chams = false,
-            chamsOutline = false,
-            distance = false,
-            distanceOutline = false,
-        }
-    }
+    silent = { Enabled = false },
+    wallbang = { Enabled = false }
 }
 
 -- Load Sense ESP Library
 local Sense = loadstring(game:HttpGet('https://raw.githubusercontent.com/GhostDuckyy/ESP-Library/refs/heads/main/Sense/source.lua'))()
 
--- Load Remote Config from GitHub
+-- Load Remote Config from GitHub and apply directly to Sense & SETTINGS
 local success, config = pcall(function()
     local chunk, err = loadstring(game:HttpGet('https://raw.githubusercontent.com/Fries-dev/newcleanslate/refs/heads/main/MainProp.lua'))
     if not chunk then error(err) end
@@ -62,305 +42,271 @@ if success and type(config) == "table" then
         end
     end
 
-    applySettings(SETTINGS, config)
     applySettings(Sense, config)
-    print("Config applied successfully to SETTINGS and Sense!")
+    applySettings(SETTINGS, config)
+    print("Config applied successfully to Sense and SETTINGS!")
 else
     warn("Failed to load config from GitHub. Error: ", config)
 end
 
 -- Load UI Library
-local Library, Themes = loadstring(game:HttpGet("https://raw.githubusercontent.com/i77lhm/Libraries/refs/heads/main/Atlanta/Library.lua"))()
-local Window = Library:window({name = "Atlanta | "})
+local library, themes = loadstring(game:HttpGet("https://raw.githubusercontent.com/i77lhm/Libraries/refs/heads/main/Atlanta/Library.lua"))()
 
-local CombatTab   = Window:tab({name = "Combat"})
-local SettingsTab = Window:tab({name = "Settings"})
-local FovSec      = CombatTab:section({name = "Fov"})
-local AimSec      = CombatTab:section({name = "Combat Settings"})
-local EspSec      = CombatTab:section({name = "ESP Settings"})
-local ModelSec    = CombatTab:section({name = "Model Transformer"})
+local window = library:window({name = os.date('Atlanta |  - %b %d %Y'), size = dim2(0, 750, 0, 782)})
 
--- Model Transformer Functions
-local transformedModel = nil
-local modelConnection = nil
-local savedAccessories = {}
-local originalTransparencies = {}
+local Aiming = window:tab({name = "Aiming"})
+local Visuals = window:tab({name = "Visuals"})
+local Misc = window:tab({name = "Misc"})
 
-local function restoreCharacter(character)
-    if modelConnection then
-        modelConnection:Disconnect()
-        modelConnection = nil
-    end
 
-    if transformedModel then
-        transformedModel:Destroy()
-        transformedModel = nil
-    end
-
-    table.clear(originalTransparencies)
-
-    if not character then return end
-
-    for _, part in ipairs(character:GetDescendants()) do
-        if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
-            part.Transparency = 0
-        elseif part:IsA("Decal") then
-            part.Transparency = 0
-        end
-    end
-
-    for _, acc in ipairs(savedAccessories) do
-        if acc then
-            acc.Parent = character
-        end
-    end
-    table.clear(savedAccessories)
-end
-
--- UI Elements: FOV & Zoom
-FovSec:toggle({
-    name = "FOV Changer",  
-    flag = "FovChanger_Enabled", 
-    default = SETTINGS.Fov.Enabled, 
-    callback = function(v) SETTINGS.Fov.Enabled = v end
-})
-
-FovSec:slider({
-    name = "FOV Amount",   
-    flag = "FovChanger_Amount",  
-    min = 70, 
-    default = SETTINGS.Fov.Amount, 
-    max = 120, 
-    suffix = " fov", 
-    interval = 1, 
-    callback = function(v) SETTINGS.Fov.Amount = v end
-})
-
-FovSec:toggle({
-    name = "Zoom Enabled", 
-    flag = "FovZoom_Enabled",    
-    default = SETTINGS.Zoom.Enabled, 
-    callback = function(v) SETTINGS.Zoom.Enabled = v end
-}):keybind({
-    flag = "FovZoom_Key",
-    name = "Zoom Key",
-    key = Enum.KeyCode.Z,
-    mode = "hold",
-    callback = function(active) zoomKeyActive = active end
-})
-
-FovSec:slider({
-    name = "Zoom Amount",   
-    flag = "FovZoom_Amount",  
-    min = 10, 
-    default = SETTINGS.Zoom.Amount, 
-    max = 70, 
-    suffix = " fov", 
-    interval = 1, 
-    callback = function(v) SETTINGS.Zoom.Amount = v end
-})
-
--- Player Enabled Toggle
-AimSec:toggle({
-    name = "player Enabled", 
-    flag = "player_Enabled",    
-    default = SETTINGS.player.Enabled, 
-    callback = function(v) 
-        SETTINGS.player.Enabled = v
-        if v then
-            pcall(function() Sense.Load() end)
-        else
-            pcall(function() Sense.Unload() end)
-        end
-    end
-})
-
--- Master Global Outline Toggle
-EspSec:toggle({
-    name = "Global Outlines",
-    flag = "Global_Outlines",
-    default = true,
-    callback = function(state)
-        for key, _ in pairs(SETTINGS.teamSettings.enemy) do
-            -- Find any setting that contains "Outline" but isn't a color table
-            if key:lower():find("outline") and type(SETTINGS.teamSettings.enemy[key]) == "boolean" then
-                SETTINGS.teamSettings.enemy[key] = state
-                if Sense.teamSettings and Sense.teamSettings.enemy then
-                    Sense.teamSettings.enemy[key] = state
-                end
+do
+    local column = Aiming:column() 
+    local selec, lock = column:multi_section({names = {"Selection", "Lock"}})
+    
+    selec:toggle({
+        name = "Player Enabled", 
+        flag = "player_Enabled", 
+        default = SETTINGS.player.Enabled, 
+        value = SETTINGS.player.Enabled, 
+        callback = function(v) 
+            SETTINGS.player.Enabled = v
+            if Sense.teamSettings and Sense.teamSettings.enemy then
+                Sense.teamSettings.enemy.enabled = v
+                Sense.teamSettings.enemy.box = v
             end
-        end
-    end
-})
-
--- Helper function to build UI controls (toggles, sliders, and colorpickers)
-local function BuildTeamUI(section, teamName, teamTable, senseTable)
-    for key, value in pairs(teamTable) do
-        local flagName = teamName .. "_" .. key
-        local displayName = key:gsub("(%l)(%u)", "%1 %2"):gsub("^%l", string.upper)
-
-        if type(value) == "boolean" then
-            section:toggle({
-                name = displayName,
-                flag = flagName,
-                default = value,
-                callback = function(v)
-                    teamTable[key] = v
-                    if senseTable then senseTable[key] = v end
-                end
-            })
-        elseif type(value) == "number" then
-            section:slider({
-                name = displayName,
-                flag = flagName,
-                min = 0,
-                default = value,
-                max = 1000, 
-                interval = 1,
-                callback = function(v)
-                    teamTable[key] = v
-                    if senseTable then senseTable[key] = v end
-                end
-            })
-        elseif type(value) == "table" and typeof(value[1]) == "Color3" then
-            pcall(function()
-                local labelObj = section:label({ name = displayName })
-                labelObj:colorpicker({
-                    name = displayName,
-                    flag = flagName,
-                    color = value[1],
-                    alpha = value[2],
-                    callback = function(newColor, newAlpha)
-                        teamTable[key][1] = newColor
-                        if newAlpha ~= nil then teamTable[key][2] = newAlpha end
-                        if senseTable and senseTable[key] then
-                            senseTable[key][1] = newColor
-                            if newAlpha ~= nil then senseTable[key][2] = newAlpha end
-                        end
-                    end
-                })
-            end)
-        end
-    end
-end
-
--- Build UI for Enemy ESP and pass Sense's table to sync updates
-BuildTeamUI(EspSec, "Enemy", SETTINGS.teamSettings.enemy, Sense.teamSettings.enemy)
-
--- Model Transformer Toggle
-ModelSec:toggle({
-    name = "Transform into Model",
-    flag = "ModelTransformer_Enabled",
-    default = false,
-    callback = function(enabled)
-        local character = Client.Character
-        if not character or not character:FindFirstChild("HumanoidRootPart") then return end
-
-        if not enabled then
-            restoreCharacter(character)
-            return
-        end
-
-        restoreCharacter(character)
-
-        local success, objects = pcall(function()
-            return game:GetObjects("rbxassetid://138151705692565")
-        end)
-
-        if success and objects and #objects > 0 then
-            local rawAsset = objects[1]
-            
-            if rawAsset:IsA("Model") then
-                transformedModel = rawAsset
-            elseif rawAsset:IsA("Folder") then
-                transformedModel = Instance.new("Model")
-                transformedModel.Name = "CustomPlayerModel"
-                for _, child in ipairs(rawAsset:GetChildren()) do
-                    child.Parent = transformedModel
-                end
-            elseif rawAsset:IsA("BasePart") then
-                transformedModel = Instance.new("Model")
-                transformedModel.Name = "CustomPlayerModel"
-                rawAsset.Parent = transformedModel
-                transformedModel.PrimaryPart = rawAsset
+            if v then
+                pcall(function() Sense.Load() end)
             else
-                transformedModel = rawAsset:FindFirstChildWhichIsA("Model")
-                if not transformedModel then
-                    local part = rawAsset:FindFirstChildWhichIsA("BasePart", true)
-                    if part then
-                        transformedModel = Instance.new("Model")
-                        transformedModel.Name = "CustomPlayerModel"
-                        part.Parent = transformedModel
-                        transformedModel.PrimaryPart = part
+                pcall(function() Sense.Unload() end)
+            end
+        end
+    })
+    
+    selec:toggle({
+        name = "Global Outlines", 
+        flag = "Global_Outlines", 
+        default = true, 
+        value = true, 
+        callback = function(state)
+            if Sense.teamSettings and Sense.teamSettings.enemy then
+                for key, _ in pairs(Sense.teamSettings.enemy) do
+                    if key:lower():find("outline") and type(Sense.teamSettings.enemy[key]) == "boolean" then
+                        Sense.teamSettings.enemy[key] = state
                     end
                 end
             end
+        end
+    })
+    selec:toggle({
+        name = "Silent aim", 
+        flag = "Silent_aim", 
+        default = false, 
+        value = false, 
+        callback = function(v) 
+            SETTINGS.silent.Enabled = v 
+        end
+    })
+    local FovSec = selec
+    FovSec:toggle({name = "FOV Changer", flag = "FovChanger_Enabled", value = SETTINGS.Fov.Enabled, callback = function(v) SETTINGS.Fov.Enabled = v end})
+    FovSec:slider({name = "FOV Amount", min = 70, max = 120, default = SETTINGS.Fov.Amount, interval = 1, suffix = " fov", flag = "FovChanger_Amount", callback = function(v) SETTINGS.Fov.Amount = v end})
+    
+    FovSec:toggle({name = "Zoom Enabled", flag = "FovZoom_Enabled", value = SETTINGS.Zoom.Enabled, callback = function(v) SETTINGS.Zoom.Enabled = v end}):keybind({
+        name = "Zoom Key",
+        flag = "FovZoom_Key",
+        key = Enum.KeyCode.Z,
+        mode = "hold",
+        callback = function(active) zoomKeyActive = active end
+    })
+    FovSec:slider({name = "Zoom Amount", min = 10, max = 70, default = SETTINGS.Zoom.Amount, interval = 1, suffix = " fov", flag = "FovZoom_Amount", callback = function(v) SETTINGS.Zoom.Amount = v end})
+end
 
-            if transformedModel then
-                transformedModel.Name = "CustomPlayerModel"
-                transformedModel:PivotTo(character.HumanoidRootPart.CFrame)
-                transformedModel.Parent = Workspace
+-- Visuals Tab Setup (Dynamic ESP Settings & Model Transformer)
+do
+    local column = Visuals:column()
+    local section = column:section({name = "ESP Settings", toggle = false})
+    
+    if Sense.teamSettings and Sense.teamSettings.enemy then
+        for key, value in pairs(Sense.teamSettings.enemy) do
+            if not key:lower():find("outline") and key ~= "enabled" and key ~= "box" then
+                local displayName = key:gsub("(%l)(%u)", "%1 %2"):gsub("^%l", string.upper)
+                if type(value) == "boolean" then
+                    section:toggle({
+                        name = displayName,
+                        flag = "Enemy_" .. key,
+                        value = value,
+                        callback = function(v)
+                            Sense.teamSettings.enemy[key] = v
+                        end
+                    })
+                elseif type(value) == "number" then
+                    section:slider({
+                        name = displayName,
+                        min = 0,
+                        max = 1000,
+                        default = value,
+                        interval = 1,
+                        flag = "Enemy_" .. key,
+                        callback = function(v)
+                            Sense.teamSettings.enemy[key] = v
+                        end
+                    })
+                elseif type(value) == "table" and typeof(value[1]) == "Color3" then
+                    pcall(function()
+                        local lbl = section:label({name = displayName})
+                        lbl:colorpicker({
+                            flag = "Enemy_" .. key,
+                            color = value[1],
+                            alpha = value[2],
+                            callback = function(newColor, newAlpha)
+                                Sense.teamSettings.enemy[key][1] = newColor
+                                if newAlpha ~= nil then Sense.teamSettings.enemy[key][2] = newAlpha end
+                            end
+                        })
+                    end)
+                end
+            end
+        end
+    end
 
-                local rootPart = transformedModel.PrimaryPart or transformedModel:FindFirstChildWhichIsA("BasePart")
-                for _, part in ipairs(transformedModel:GetDescendants()) do
-                    if part:IsA("BasePart") then
-                        part.Anchored = false
-                        part.CanCollide = false
-                        originalTransparencies[part] = part.Transparency
+    -- Model Transformer Section
+    local modelSec = column:section({name = "Model Transformer", toggle = false})
+    local transformedModel = nil
+    local modelConnection = nil
+    local savedAccessories = {}
+    local originalTransparencies = {}
 
-                        if rootPart and part ~= rootPart then
-                            local weld = Instance.new("WeldConstraint")
-                            weld.Part0 = rootPart
-                            weld.Part1 = part
-                            weld.Parent = part
+    modelSec:toggle({
+        name = "Transform into Model",
+        flag = "ModelTransformer_Enabled",
+        value = false,
+        callback = function(enabled)
+            if modelConnection then modelConnection:Disconnect(); modelConnection = nil end
+            if transformedModel then transformedModel:Destroy(); transformedModel = nil end
+            table.clear(originalTransparencies)
+
+            if not enabled then return end
+
+            local character = Client.Character
+            if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+
+            local success, objects = pcall(function()
+                return game:GetObjects("rbxassetid://138151705692565")
+            end)
+
+            if success and objects and #objects > 0 then
+                local rawAsset = objects[1]
+                if rawAsset:IsA("Model") then
+                    transformedModel = rawAsset
+                elseif rawAsset:IsA("Folder") then
+                    transformedModel = Instance.new("Model")
+                    transformedModel.Name = "CustomPlayerModel"
+                    for _, child in ipairs(rawAsset:GetChildren()) do child.Parent = transformedModel end
+                elseif rawAsset:IsA("BasePart") then
+                    transformedModel = Instance.new("Model")
+                    transformedModel.Name = "CustomPlayerModel"
+                    rawAsset.Parent = transformedModel
+                    transformedModel.PrimaryPart = rawAsset
+                end
+
+                if transformedModel then
+                    transformedModel.Name = "CustomPlayerModel"
+                    transformedModel:PivotTo(character.HumanoidRootPart.CFrame)
+                    transformedModel.Parent = Workspace
+
+                    local rootPart = transformedModel.PrimaryPart or transformedModel:FindFirstChildWhichIsA("BasePart")
+                    for _, part in ipairs(transformedModel:GetDescendants()) do
+                        if part:IsA("BasePart") then
+                            part.Anchored = false
+                            part.CanCollide = false
+                            originalTransparencies[part] = part.Transparency
+                            if rootPart and part ~= rootPart then
+                                local weld = Instance.new("WeldConstraint")
+                                weld.Part0 = rootPart
+                                weld.Part1 = part
+                                weld.Parent = part
+                            end
                         end
                     end
-                end
 
-                for _, item in ipairs(character:GetDescendants()) do
-                    if item:IsA("BasePart") and item.Name ~= "HumanoidRootPart" then
-                        item.Transparency = 1
-                    elseif item:IsA("Decal") then
-                        item.Transparency = 1
-                    elseif item:IsA("Accessory") then
-                        table.insert(savedAccessories, item)
-                        item.Parent = nil
+                    for _, item in ipairs(character:GetDescendants()) do
+                        if item:IsA("BasePart") and item.Name ~= "HumanoidRootPart" then
+                            item.Transparency = 1
+                        elseif item:IsA("Decal") then
+                            item.Transparency = 1
+                        elseif item:IsA("Accessory") then
+                            table.insert(savedAccessories, item)
+                            item.Parent = nil
+                        end
                     end
-                end
 
-                local verticalOffset = -0.5
-
-                modelConnection = RunService.RenderStepped:Connect(function()
-                    local isFirstPerson = (Camera.CFrame.Position - Camera.Focus.Position).Magnitude < 1.5
-
-                    if transformedModel and character and character:FindFirstChild("HumanoidRootPart") then
-                        transformedModel:PivotTo(character.HumanoidRootPart.CFrame * CFrame.new(0, verticalOffset, 0))
-                        
-                        for part, origTrans in pairs(originalTransparencies) do
-                            if part and part.Parent then
-                                if isFirstPerson then
-                                    part.Transparency = 1
-                                    part.LocalTransparencyModifier = 1
-                                else
-                                    part.Transparency = origTrans
-                                    part.LocalTransparencyModifier = 0
+                    modelConnection = RunService.RenderStepped:Connect(function()
+                        local isFirstPerson = (Camera.CFrame.Position - Camera.Focus.Position).Magnitude < 1.5
+                        if transformedModel and character and character:FindFirstChild("HumanoidRootPart") then
+                            transformedModel:PivotTo(character.HumanoidRootPart.CFrame * CFrame.new(0, -0.5, 0))
+                            for part, origTrans in pairs(originalTransparencies) do
+                                if part and part.Parent then
+                                    part.Transparency = isFirstPerson and 1 or origTrans
+                                    part.LocalTransparencyModifier = isFirstPerson and 1 or 0
                                 end
                             end
                         end
-                    else
-                        restoreCharacter(character)
-                    end
-                end)
-            else
-                warn("Could not convert loaded asset into a valid transformable model.")
+                    end)
+                end
             end
-        else
-            warn("Failed to fetch asset 138151705692565 via GetObjects.")
+        end
+    })
+end
+local function isVisible(target)
+    local origin = game.workspace.CurrentCamera.CFrame
+    local params = RaycastParams.new()
+    params.FilterType = Enum.RaycastFilterType.Exclude
+    params.FilterDescendantsInstances = {game.Players.LocalPlayer.Character}
+    params.IgnoreWater = true
+
+    local direction = (target.Position - origin.Position)
+    local result = workspace:Raycast(origin.Position, direction, params)
+
+    if result then
+        return game.Players:GetPlayerFromCharacter(result.Instance:FindFirstAncestorOfClass("Model")) ~= nil
+    else
+        return true
+    end
+end
+local function GetClosestPlayer()
+    local closestDistance = math.huge
+    local closest = nil
+    local camera = workspace.CurrentCamera
+
+    local silentOn = SETTINGS.silent.Enabled
+    local wallbangOn = SETTINGS.wallbang.Enabled
+    for _, v in pairs(game.Players:GetPlayers()) do
+        if v == game.Players.LocalPlayer then continue end
+        
+        local char = v.Character
+        if not char then continue end
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if not hrp then continue end
+        local hum = char:FindFirstChild("Humanoid")
+        if not hum or hum.Health <= 0 then continue end
+
+        local head = char:FindFirstChild("Head")
+        if not head then continue end
+        local screenPos, onScreen = camera:WorldToViewportPoint(hrp.Position)
+        if onScreen then
+            local distance = (Vector2.new(screenPos.X, screenPos.Y) - camera.ViewportSize / 2).Magnitude
+            if distance < closestDistance then
+                if wallbangOn then
+                    if not isVisible(head) then continue end
+                end
+                closestDistance = distance
+                closest = head
+            end
         end
     end
-})
 
--- Render Loop for FOV/Zoom
+    return closest
+end
+-- FOV & Zoom Render Loop
 do
     local baseFov = Camera.FieldOfView
     SETTINGS.Fov.Base = baseFov
@@ -386,7 +332,37 @@ do
         Camera.FieldOfView = displayFov
     end)
 end
+game:GetService("RunService").RenderStepped:Connect(function()
+    target = GetClosestPlayer()
+end)
+local cast = filtergc("table", {Keys = {"cast"}}, true).cast
 
-Library:config_list_update()
-CombatTab.open_tab()
-Library.old_config = Library:get_config()
+local old
+do
+    local silentOn = SETTINGS.silent.Enabled
+    local wallbangOn = SETTINGS.wallbang.Enabled
+    if silentOn then
+        old = hookfunction(cast, function(p1,p2,p3)
+            if silentOn then
+                if target then
+                    return target, target.Position, Vector3.new(0,1,0), target.Material
+                end
+            end
+            return old(p1,p2,p3)
+        end)
+    end
+end
+
+-- Initialisation stuff
+library:config_list_update()
+
+for index, value in themes.preset do 
+    pcall(function()
+        library:update_theme(index, value)
+    end)
+end
+
+task.wait()
+
+Aiming.open_tab() 
+library.old_config = library:get_config()
