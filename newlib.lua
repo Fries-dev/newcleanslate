@@ -1775,56 +1775,39 @@
 						library:load_config(library.old_config)
 					end})
 					section:button({name = "Unload Menu", callback = function()
-						library:load_config(library.old_config)
+							library:load_config(library.old_config)
 
-						-- Universal cleanup: destroys any ScreenGui containing "WatermarkGui"
-						pcall(function()
-							for _, gui in ipairs(game:GetService("CoreGui"):GetChildren()) do
-								if gui.Name:match("WatermarkGui") then
-									gui:Destroy()
+							-- Universal cleanup: destroys any ScreenGui containing "WatermarkGui"
+							pcall(function()
+								for _, gui in ipairs(game:GetService("CoreGui"):GetChildren()) do
+									if gui.Name:match("WatermarkGui") then
+										gui:Destroy()
+									end
+								end
+								for _, gui in ipairs(game:GetService("Players").LocalPlayer.PlayerGui:GetChildren()) do
+									if gui.Name:match("WatermarkGui") then
+										gui:Destroy()
+									end
+								end
+							end)
+
+							for _, gui in library.guis do 
+								if gui and gui.Parent then
+									gui:Destroy() 
+								end
+							end 
+
+							for _, connection in library.connections do 
+								if connection and connection.Connected then
+									connection:Disconnect() 
 								end
 							end
-							for _, gui in ipairs(game:GetService("Players").LocalPlayer.PlayerGui:GetChildren()) do
-								if gui.Name:match("WatermarkGui") then
-									gui:Destroy()
-								end
+
+							if blur then
+								blur:Destroy()
 							end
-						end)
 
-						for _, gui in library.guis do 
-							if gui and gui.Parent then
-								gui:Destroy() 
-							end
-						end 
-
-						for _, connection in library.connections do 
-							if connection and connection.Connected then
-								connection:Disconnect() 
-							end
-						end
-
-						if blur then
-							blur:Destroy()
-						end
-					end})
-
-						for _, gui in library.guis do 
-							if gui and gui.Parent then
-								gui:Destroy() 
-							end
-						end 
-
-						for _, connection in library.connections do 
-							if connection and connection.Connected then
-								connection:Disconnect() 
-							end
-						end
-
-						if blur then
-							blur:Destroy()
-						end
-
-						print("[DEBUG] Unload sequence finished.")
+							print("[DEBUG] Unload sequence finished.")
 					end})
 			-- 
 					
