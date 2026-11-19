@@ -1887,7 +1887,7 @@
 				FontFace = library.font,
 				TextColor3 = themes.preset.text,
 				BorderColor3 = rgb(0, 0, 0),
-				Text = "  " .. cfg.title .. "  ",
+				Text = format_title(cfg.prefix, cfg.suffix),
 				Size = dim2(0, 0, 0, 18),
 				BackgroundTransparency = 1,
 				Position = dim2(0, -1, 0, 1),
@@ -1956,9 +1956,18 @@
 				}
 			})
 			
-			function cfg.change_title(input)
-				title_text.Text = "  " .. input .. "  "
+			function cfg.change_title(new_prefix, new_suffix)
+				cfg.prefix = new_prefix or cfg.prefix
+				cfg.suffix = new_suffix or cfg.suffix
+				title_text.Text = format_title(cfg.prefix, cfg.suffix)
 			end
+
+			-- Automatically re-colors the suffix if the user changes the accent color in the Style tab
+			game:GetService("RunService").Heartbeat:Connect(function()
+				if watermark_outline.Visible then
+					title_text.Text = format_title(cfg.prefix, cfg.suffix)
+				end
+			end)
 
 			function cfg.change_info(input)
 				info_text.Text = "  " .. input .. "  "
