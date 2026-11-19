@@ -1852,7 +1852,7 @@
 			local cfg = {
 				script_name = options.script_name or "my_script",
 				suffix = options.suffix or "client",
-				role = options.role + "" or "admin",
+				role = options.role or "admin",
 				role_color = options.role_color or "00FF7F"
 			}
 
