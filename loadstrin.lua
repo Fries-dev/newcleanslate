@@ -307,7 +307,6 @@ function library:game_selector(options)
 
     return cfg
 end
-
 library:game_selector({
     prefix = "Game",
     suffix = "Hub",
@@ -319,18 +318,23 @@ library:game_selector({
     callback = function(gameData)
         print("Selected game:", gameData.name)
 
-        -- Put your code here using gameData.id or gameData.name!
         if gameData.id == 6872265039 then
             print("Running BedWars script features...")
-            loadstring(game:HttpGet("https://raw.githubusercontent.com/Fries-dev/newcleanslate/refs/heads/main/universal.lua"))()
+            -- This fetches and runs the code from your external GitHub file
+            local success, err = pcall(function()
+                loadstring(game:HttpGet("https://raw.githubusercontent.com/Fries-dev/newcleanslate/refs/heads/main/universal.lua"))()
+            end)
+            if not success then
+                warn("Failed to load BedWars script:", err)
+            end
             
         elseif gameData.id == 2753915549 then
             print("Running Blox Fruits script features...")
-            -- Put your Blox Fruits code here
+            -- Put your Blox Fruits raw GitHub link here later
             
         elseif gameData.name == "Arsenal" then
             print("Running Arsenal script features...")
-            -- Put your Arsenal code here
+            -- Put your Arsenal raw GitHub link here later
         end
     end
 })
