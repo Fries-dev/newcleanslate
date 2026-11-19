@@ -1833,17 +1833,17 @@
 				role_color = options.role_color or "00FF7F"
 			}
 
-			local target_parent = custom_sgui or library.sgui or library.gui
-			if not target_parent then
-				for _, gui in ipairs(game:GetService("CoreGui"):GetChildren()) do
-					if gui:IsA("ScreenGui") then
-						target_parent = gui
-						break
-					end
-				end
-			end
-			if not target_parent then
-				target_parent = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+			-- Create an independent ScreenGui so the library's config loop ignores it entirely
+			local watermark_sgui = Instance.new("ScreenGui")
+			watermark_sgui.Name = "EtherWatermarkGui"
+			watermark_sgui.ResetOnSpawn = false
+			watermark_sgui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+			pcall(function()
+				watermark_sgui.Parent = game:GetService("CoreGui")
+			end)
+			if not watermark_sgui.Parent then
+				watermark_sgui.Parent = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
 			end
 
 			local function format_title(pre, suf)
@@ -1851,7 +1851,7 @@
 			end
 
 			local watermark_outline = library:create("Frame", {
-				Parent = target_parent,
+				Parent = watermark_sgui,
 				Name = "CustomWatermark",
 				BorderColor3 = Color3.fromRGB(0, 0, 0),
 				Position = options.position or UDim2.new(0, 20, 0, 60),
@@ -1947,8 +1947,8 @@
 			end
 
 			function cfg.destroy()
-				if watermark_outline then
-					watermark_outline:Destroy()
+				if watermark_sgui then
+					watermark_sgui:Destroy()
 				end
 			end
 
