@@ -1,4 +1,6 @@
 -- Services & Variables
+-- Replace YOUR_REPO_NAME with the repository where you saved your modified Library.lua
+local library, themes = loadstring(game:HttpGet("https://raw.githubusercontent.com/Fries-dev/newcleanslate/refs/heads/main/newlib.lua?v=" .. tick()))()
 local CoreGuiRef = cloneref and cloneref(game:GetService("CoreGui")) or game:GetService("CoreGui")
 local gethuiFn = gethui or function() return CoreGuiRef end
 
@@ -51,18 +53,28 @@ else
 end
 
 -- Load UI Library
-local library, themes = loadstring(game:HttpGet("https://raw.githubusercontent.com/Fries-dev/newcleanslate/refs/heads/main/newlib.lua"))()
 
-local hub_name = "ether" -- Or whatever you named your window
+local hub_name = "ether"
 
+-- 1. Yield here until signed in
+library:login_window({
+    prefix = hub_name,
+    suffix = "client",
+    credentials = {
+        ["admin"] = "ether2026",
+        ["networph"] = "devkey123"
+    }
+})
+
+-- 2. Everything below runs ONLY after successful login
 local window = library:window({
-    name = hub_name .. " | - Aug 04 2025",
+    name = hub_name .. " | - Nov 18 2026",
     size = UDim2.new(0, 600, 0, 450)
 })
 
 local watermark = library:custom_watermark({
-    prefix = hub_name, -- Uses your window/hub name
-    suffix = "client", -- Automatically colored with themes.preset.accent
+    prefix = hub_name,
+    suffix = "client",
     info = "loading...",
     position = UDim2.new(0, 20, 0, 20)
 })

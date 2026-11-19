@@ -1979,190 +1979,115 @@
 
 			return cfg 
 		end
-		function library:login_window(options)
+		function library:custom_watermark(options)
 			local cfg = {
-				prefix = options.prefix or "ether",
-				suffix = options.suffix or "client",
-				credentials = options.credentials or { ["dev"] = "1234" },
-				authenticated = false
+				tag = options.tag or "admin",
+				suffix = options.suffix or "client"
 			}
 
-			local accent_hex = themes.preset.accent:ToHex()
+			local function format_title(pre, suf)
+				return string.format('  %s<font color="#%s">%s</font>  ', pre, themes.preset.accent:ToHex(), suf)
+			end
 
-			-- Main Outer Outline (Centered on screen)
-			local login_outline = library:create("Frame", {
-				Parent = sgui,
-				Name = "LoginWindow",
-				AnchorPoint = vec2(0.5, 0.5),
-				Position = dim2(0.5, 0, 0.5, 0),
-				Size = dim2(0, 260, 0, 148),
+			local watermark_outline = library:create("Frame", {
+				Parent = custom_sgui,
+				BorderColor3 = Color3.fromRGB(0, 0, 0),
+				Position = options.position or UDim2.new(0, 20, 0, 20),
+				Size = UDim2.new(0, 0, 0, 42),
 				BorderSizePixel = 0,
+				AutomaticSize = Enum.AutomaticSize.X,
 				BackgroundColor3 = themes.preset.outline
-			}) library:apply_theme(login_outline, "outline", "BackgroundColor3")
-			library:draggify(login_outline)
+			})
+			library:apply_theme(watermark_outline, "outline", "BackgroundColor3")
+			if library.draggify then library:draggify(watermark_outline) end
 
-			-- Inline Border
-			local login_inline = library:create("Frame", {
-				Parent = login_outline,
-				Position = dim2(0, 1, 0, 1),
-				Size = dim2(1, -2, 1, -2),
+			local watermark_inline = library:create("Frame", {
+				Parent = watermark_outline,
+				Position = UDim2.new(0, 1, 0, 1),
+				Size = UDim2.new(1, -2, 1, -2),
 				BorderSizePixel = 0,
 				BackgroundColor3 = themes.preset.inline
-			}) library:apply_theme(login_inline, "inline", "BackgroundColor3")
-
-			-- Background with Contrast Gradient
-			local login_bg = library:create("Frame", {
-				Parent = login_inline,
-				Position = dim2(0, 1, 0, 1),
-				Size = dim2(1, -2, 1, -2),
-				BorderSizePixel = 0,
-				BackgroundColor3 = rgb(255, 255, 255)
 			})
-			local bg_grad = library:create("UIGradient", {
-				Parent = login_bg,
-				Rotation = 90,
-				Color = rgbseq{
-					rgbkey(0, rgb(41, 41, 55)),
-					rgbkey(1, rgb(35, 35, 47))
-				}
-			}) library:apply_theme(bg_grad, "contrast", "Color")
+			library:apply_theme(watermark_inline, "inline", "BackgroundColor3")
 
-			-- Top Accent Bar
-			local top_accent = library:create("Frame", {
-				Parent = login_outline,
-				Position = dim2(0, 2, 0, 2),
-				Size = dim2(1, -4, 0, 2),
+			local watermark_background = library:create("Frame", {
+				Parent = watermark_inline,
+				Position = UDim2.new(0, 1, 0, 1),
+				Size = UDim2.new(1, -2, 1, -2),
 				BorderSizePixel = 0,
-				BackgroundColor3 = themes.preset.accent
-			}) library:apply_theme(top_accent, "accent", "BackgroundColor3")
+				BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+			})
 
-			-- Header Title
-			local title_label = library:create("TextLabel", {
-				Parent = login_bg,
+			local UIGradient = library:create("UIGradient", {
+				Parent = watermark_background,
+				Rotation = 90,
+				Color = ColorSequence.new({
+					ColorSequenceKeypoint.new(0, Color3.fromRGB(41, 41, 55)),
+					ColorSequenceKeypoint.new(1, Color3.fromRGB(35, 35, 47))
+				})
+			})
+			library:apply_theme(UIGradient, "contrast", "Color")
+
+			local title_text = library:create("TextLabel", {
+				Parent = watermark_background,
 				FontFace = library.font,
 				TextColor3 = themes.preset.text,
-				Text = string.format('  %s<font color="#%s">%s</font> | Authentication', cfg.prefix, accent_hex, cfg.suffix),
-				Size = dim2(1, 0, 0, 20),
-				Position = dim2(0, 0, 0, 2),
+				Text = format_title(cfg.tag, cfg.suffix),
+				Size = UDim2.new(0, 0, 0, 18),
 				BackgroundTransparency = 1,
-				TextXAlignment = Enum.TextXAlignment.Left,
+				Position = UDim2.new(0, -1, 0, 1),
+				AutomaticSize = Enum.AutomaticSize.X,
 				TextSize = 12,
 				RichText = true
 			})
-			library:create("UIStroke", { Parent = title_label, LineJoinMode = Enum.LineJoinMode.Miter })
+			library:create("UIStroke", { Parent = title_text, LineJoinMode = Enum.LineJoinMode.Miter })
 
-			-- Header Divider
 			local divider = library:create("Frame", {
-				Parent = login_outline,
-				Position = dim2(0, 2, 0, 23),
-				Size = dim2(1, -4, 0, 1),
+				Parent = watermark_outline,
+				Position = UDim2.new(0, 2, 0, 20),
+				Size = UDim2.new(1, -4, 0, 1),
 				BorderSizePixel = 0,
-				BackgroundColor3 = themes.preset.inline
-			}) library:apply_theme(divider, "inline", "BackgroundColor3")
-
-			-- Helper for themed input boxes
-			local function make_box(placeholder, y_pos)
-				local box_outline = library:create("Frame", {
-					Parent = login_bg,
-					Position = dim2(0, 10, 0, y_pos),
-					Size = dim2(1, -20, 0, 22),
-					BorderSizePixel = 0,
-					BackgroundColor3 = themes.preset.outline
-				}) library:apply_theme(box_outline, "outline", "BackgroundColor3")
-
-				local box_bg = library:create("Frame", {
-					Parent = box_outline,
-					Position = dim2(0, 1, 0, 1),
-					Size = dim2(1, -2, 1, -2),
-					BorderSizePixel = 0,
-					BackgroundColor3 = themes.preset.inline
-				}) library:apply_theme(box_bg, "inline", "BackgroundColor3")
-
-				local textbox = library:create("TextBox", {
-					Parent = box_bg,
-					FontFace = library.font,
-					TextColor3 = themes.preset.text,
-					PlaceholderColor3 = rgb(130, 130, 130),
-					PlaceholderText = placeholder,
-					Text = "",
-					Size = dim2(1, -8, 1, 0),
-					Position = dim2(0, 4, 0, 0),
-					BackgroundTransparency = 1,
-					TextXAlignment = Enum.TextXAlignment.Left,
-					TextSize = 11,
-					ClearTextOnFocus = false
-				})
-				library:create("UIStroke", { Parent = textbox, LineJoinMode = Enum.LineJoinMode.Miter })
-				return textbox
-			end
-
-			local user_box = make_box("Developer Username...", 32)
-			local pass_box = make_box("Developer Key / Password...", 60)
-
-			-- Status Label
-			local status_label = library:create("TextLabel", {
-				Parent = login_bg,
-				FontFace = library.font,
-				TextColor3 = rgb(160, 160, 160),
-				Text = "Awaiting credentials...",
-				Size = dim2(1, -20, 0, 14),
-				Position = dim2(0, 10, 0, 86),
-				BackgroundTransparency = 1,
-				TextXAlignment = Enum.TextXAlignment.Left,
-				TextSize = 11
+				BackgroundColor3 = themes.preset.accent
 			})
-			library:create("UIStroke", { Parent = status_label, LineJoinMode = Enum.LineJoinMode.Miter })
+			library:apply_theme(divider, "accent", "BackgroundColor3")
 
-			-- Sign In Button
-			local btn_outline = library:create("Frame", {
-				Parent = login_bg,
-				Position = dim2(0, 10, 0, 106),
-				Size = dim2(1, -20, 0, 24),
-				BorderSizePixel = 0,
-				BackgroundColor3 = themes.preset.outline
-			}) library:apply_theme(btn_outline, "outline", "BackgroundColor3")
-
-			local btn = library:create("TextButton", {
-				Parent = btn_outline,
-				Position = dim2(0, 1, 0, 1),
-				Size = dim2(1, -2, 1, -2),
-				BorderSizePixel = 0,
-				BackgroundColor3 = themes.preset.inline,
+			local info_text = library:create("TextLabel", {
+				Parent = watermark_background,
 				FontFace = library.font,
 				TextColor3 = themes.preset.text,
-				Text = "Sign In",
-				TextSize = 12,
-				AutoButtonColor = false
-			}) library:apply_theme(btn, "inline", "BackgroundColor3")
-			library:create("UIStroke", { Parent = btn, LineJoinMode = Enum.LineJoinMode.Miter })
+				Text = "  loading...  ",
+				Size = UDim2.new(0, 0, 0, 18),
+				BackgroundTransparency = 1,
+				Position = UDim2.new(0, -1, 0, 21),
+				AutomaticSize = Enum.AutomaticSize.X,
+				TextSize = 11
+			})
+			library:create("UIStroke", { Parent = info_text, LineJoinMode = Enum.LineJoinMode.Miter })
 
-			-- Hover & Click Logic
-			btn.MouseEnter:Connect(function()
-				btn.BackgroundColor3 = themes.preset.accent
-			end)
-			btn.MouseLeave:Connect(function()
-				btn.BackgroundColor3 = themes.preset.inline
-			end)
+			local accent = library:create("Frame", {
+				Parent = watermark_outline,
+				Position = UDim2.new(0, 2, 0, 2),
+				Size = UDim2.new(1, -4, 0, 2),
+				BorderSizePixel = 0,
+				BackgroundColor3 = themes.preset.accent
+			})
+			library:apply_theme(accent, "accent", "BackgroundColor3")
 
-			btn.MouseButton1Click:Connect(function()
-				local u = user_box.Text
-				local p = pass_box.Text
+			function cfg.change_info(input)
+				info_text.Text = "  " .. tostring(input) .. "  "
+			end
 
-				if cfg.credentials[u] and cfg.credentials[u] == p then
-					status_label.TextColor3 = rgb(100, 255, 120)
-					status_label.Text = "Access granted! Loading..."
-					task.wait(0.6)
-					login_outline:Destroy()
-					cfg.authenticated = true
-				else
-					status_label.TextColor3 = rgb(255, 90, 90)
-					status_label.Text = "Invalid developer credentials."
+			function cfg.set_visible(bool)
+				watermark_outline.Visible = bool
+			end
+
+			RunService.Heartbeat:Connect(function()
+				if watermark_outline.Visible then
+					title_text.Text = format_title(cfg.tag, cfg.suffix)
 				end
 			end)
 
-			-- Pause script execution until authenticated
-			repeat task.wait() until cfg.authenticated
-			return true
+			return cfg
 		end
 		function library:watermark(options) 
 			local cfg = {
