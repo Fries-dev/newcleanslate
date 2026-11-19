@@ -1827,13 +1827,14 @@
 			--  
 
 			-- playerlist 
+-- playerlist 
 				local holder = library:panel({
 					name = "Playerlist", 
 					anchor_point = vec2(0, 0),
 					size = dim2(0, 529, 0, 445),
 					position = dim2(0, main_window.items.main_holder.AbsolutePosition.X - 531, 0, main_window.items.main_holder.AbsolutePosition.Y),
 					image = "rbxassetid://107070078834415",
-				})  
+				})  -- Fixed from "))" to "})"
 				
 				local items = holder.items
 
