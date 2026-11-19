@@ -27,7 +27,7 @@ end
 local Library, Themes = loadstring(game:HttpGet("https://raw.githubusercontent.com/i77lhm/Libraries/refs/heads/main/Atlanta/Library.lua"))()
 local flags = Library.flags
 
-local Window = Library:window({name = "Atlanta | "})
+local window = library:window({name = os.date('LizardWare |'), size = dim2(0, 750, 0, 782)})
 
 local CombatTab   = Window:tab({name = "Combat"})
 local SettingsTab = Window:tab({name = "Settings"})

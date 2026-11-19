@@ -1825,117 +1825,153 @@
 
 			return setmetatable(window, library)
 		end
-		function library:custom_watermark(options)
-			local cfg = {
-				tag = options.tag or "admin",
-				suffix = options.suffix or "client"
-			}
+                -- Look for where the visibility property is set in your library code:
+        -- Replace your existing visibility toggle logic with this:
+        local function set_menu_visibility(element, state)
+            if element:IsA("ScreenGui") then
+                element.Enabled = state
+            elseif element:IsA("GuiObject") then -- This safely handles Frames, TextLabels, etc.
+                element.Visible = state
+            end
+        end
+        function library:custom_watermark(options)
+            local cfg = {
+                script_name = options.script_name or "ether",
+                suffix = options.suffix or "client",
+                role = options.role or "admin",
+                role_color = options.role_color or "00FF7F"
+            }
 
-			local function format_title(pre, suf)
-				return string.format('  %s<font color="#%s">%s</font>  ', pre, themes.preset.accent:ToHex(), suf)
-			end
+            local target_parent = custom_sgui or library.sgui or library.gui
+            if not target_parent then
+                for _, gui in ipairs(game:GetService("CoreGui"):GetChildren()) do
+                    if gui:IsA("ScreenGui") then
+                        target_parent = gui
+                        break
+                    end
+                end
+            end
+            if not target_parent then
+                target_parent = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+            end
 
-			local watermark_outline = library:create("Frame", {
-				Parent = custom_sgui,
-				BorderColor3 = Color3.fromRGB(0, 0, 0),
-				Position = options.position or UDim2.new(0, 20, 0, 20),
-				Size = UDim2.new(0, 0, 0, 42),
-				BorderSizePixel = 0,
-				AutomaticSize = Enum.AutomaticSize.X,
-				BackgroundColor3 = themes.preset.outline
-			})
-			library:apply_theme(watermark_outline, "outline", "BackgroundColor3")
-			if library.draggify then library:draggify(watermark_outline) end
+            local function format_title(pre, suf)
+                return string.format('  %s<font color="#%s">%s</font>  ', pre, themes.preset.accent:ToHex(), suf)
+            end
 
-			local watermark_inline = library:create("Frame", {
-				Parent = watermark_outline,
-				Position = UDim2.new(0, 1, 0, 1),
-				Size = UDim2.new(1, -2, 1, -2),
-				BorderSizePixel = 0,
-				BackgroundColor3 = themes.preset.inline
-			})
-			library:apply_theme(watermark_inline, "inline", "BackgroundColor3")
+            local watermark_outline = library:create("Frame", {
+                Parent = target_parent,
+                Name = "CustomWatermark",
+                BorderColor3 = Color3.fromRGB(0, 0, 0),
+                Position = options.position or UDim2.new(0, 20, 0, 60),
+                Size = UDim2.new(0, 0, 0, 42),
+                BorderSizePixel = 0,
+                AutomaticSize = Enum.AutomaticSize.X,
+                BackgroundColor3 = themes.preset.outline,
+                Visible = true,
+                ZIndex = 999
+            })
+            library:apply_theme(watermark_outline, "outline", "BackgroundColor3")
+            if library.draggify then library:draggify(watermark_outline) end
 
-			local watermark_background = library:create("Frame", {
-				Parent = watermark_inline,
-				Position = UDim2.new(0, 1, 0, 1),
-				Size = UDim2.new(1, -2, 1, -2),
-				BorderSizePixel = 0,
-				BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-			})
+            -- Register into library.guis so your Unload Menu button destroys it automatically
+            if library.guis then
+                table.insert(library.guis, watermark_outline)
+            end
 
-			local UIGradient = library:create("UIGradient", {
-				Parent = watermark_background,
-				Rotation = 90,
-				Color = ColorSequence.new({
-					ColorSequenceKeypoint.new(0, Color3.fromRGB(41, 41, 55)),
-					ColorSequenceKeypoint.new(1, Color3.fromRGB(35, 35, 47))
-				})
-			})
-			library:apply_theme(UIGradient, "contrast", "Color")
+            local watermark_inline = library:create("Frame", {
+                Parent = watermark_outline,
+                Position = UDim2.new(0, 1, 0, 1),
+                Size = UDim2.new(1, -2, 1, -2),
+                BorderSizePixel = 0,
+                BackgroundColor3 = themes.preset.inline
+            })
+            library:apply_theme(watermark_inline, "inline", "BackgroundColor3")
 
-			local title_text = library:create("TextLabel", {
-				Parent = watermark_background,
-				FontFace = library.font,
-				TextColor3 = themes.preset.text,
-				Text = format_title(cfg.tag, cfg.suffix),
-				Size = UDim2.new(0, 0, 0, 18),
-				BackgroundTransparency = 1,
-				Position = UDim2.new(0, -1, 0, 1),
-				AutomaticSize = Enum.AutomaticSize.X,
-				TextSize = 12,
-				RichText = true
-			})
-			library:create("UIStroke", { Parent = title_text, LineJoinMode = Enum.LineJoinMode.Miter })
+            local watermark_background = library:create("Frame", {
+                Parent = watermark_inline,
+                Position = UDim2.new(0, 1, 0, 1),
+                Size = UDim2.new(1, -2, 1, -2),
+                BorderSizePixel = 0,
+                BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+            })
 
-			local divider = library:create("Frame", {
-				Parent = watermark_outline,
-				Position = UDim2.new(0, 2, 0, 20),
-				Size = UDim2.new(1, -4, 0, 1),
-				BorderSizePixel = 0,
-				BackgroundColor3 = themes.preset.accent
-			})
-			library:apply_theme(divider, "accent", "BackgroundColor3")
+            local UIGradient = library:create("UIGradient", {
+                Parent = watermark_background,
+                Rotation = 90,
+                Color = ColorSequence.new({
+                    ColorSequenceKeypoint.new(0, Color3.fromRGB(41, 41, 55)),
+                    ColorSequenceKeypoint.new(1, Color3.fromRGB(35, 35, 47))
+                })
+            })
+            library:apply_theme(UIGradient, "contrast", "Color")
 
-			local info_text = library:create("TextLabel", {
-				Parent = watermark_background,
-				FontFace = library.font,
-				TextColor3 = themes.preset.text,
-				Text = "  loading...  ",
-				Size = UDim2.new(0, 0, 0, 18),
-				BackgroundTransparency = 1,
-				Position = UDim2.new(0, -1, 0, 21),
-				AutomaticSize = Enum.AutomaticSize.X,
-				TextSize = 11
-			})
-			library:create("UIStroke", { Parent = info_text, LineJoinMode = Enum.LineJoinMode.Miter })
+            local title_text = library:create("TextLabel", {
+                Parent = watermark_background,
+                FontFace = library.font,
+                TextColor3 = themes.preset.text,
+                Text = format_title(cfg.script_name, cfg.suffix),
+                Size = UDim2.new(0, 0, 0, 18),
+                BackgroundTransparency = 1,
+                Position = UDim2.new(0, -1, 0, 1),
+                AutomaticSize = Enum.AutomaticSize.X,
+                TextSize = 12,
+                RichText = true
+            })
+            library:create("UIStroke", { Parent = title_text, LineJoinMode = Enum.LineJoinMode.Miter })
 
-			local accent = library:create("Frame", {
-				Parent = watermark_outline,
-				Position = UDim2.new(0, 2, 0, 2),
-				Size = UDim2.new(1, -4, 0, 2),
-				BorderSizePixel = 0,
-				BackgroundColor3 = themes.preset.accent
-			})
-			library:apply_theme(accent, "accent", "BackgroundColor3")
+            local divider = library:create("Frame", {
+                Parent = watermark_outline,
+                Position = UDim2.new(0, 2, 0, 20),
+                Size = UDim2.new(1, -4, 0, 1),
+                BorderSizePixel = 0,
+                BackgroundColor3 = themes.preset.accent
+            })
+            library:apply_theme(divider, "accent", "BackgroundColor3")
 
-			function cfg.change_info(input)
-				info_text.Text = "  " .. tostring(input) .. "  "
-			end
+            local info_text = library:create("TextLabel", {
+                Parent = watermark_background,
+                FontFace = library.font,
+                TextColor3 = themes.preset.text,
+                Text = "  loading...  ",
+                Size = UDim2.new(0, 0, 0, 18),
+                BackgroundTransparency = 1,
+                Position = UDim2.new(0, -1, 0, 21),
+                AutomaticSize = Enum.AutomaticSize.X,
+                TextSize = 11,
+                RichText = true
+            })
+            library:create("UIStroke", { Parent = info_text, LineJoinMode = Enum.LineJoinMode.Miter })
 
-			function cfg.set_visible(bool)
-				watermark_outline.Visible = bool
-			end
+            local accent = library:create("Frame", {
+                Parent = watermark_outline,
+                Position = UDim2.new(0, 2, 0, 2),
+                Size = UDim2.new(1, -4, 0, 2),
+                BorderSizePixel = 0,
+                BackgroundColor3 = themes.preset.accent
+            })
+            library:apply_theme(accent, "accent", "BackgroundColor3")
 
-			-- Fixed: Using game:GetService("RunService") directly
-			game:GetService("RunService").Heartbeat:Connect(function()
-				if watermark_outline.Visible then
-					title_text.Text = format_title(cfg.tag, cfg.suffix)
-				end
-			end)
+            function cfg.change_info(input)
+                info_text.Text = "  " .. tostring(input) .. "  "
+            end
 
-			return cfg
-		end
+            function cfg.set_visible(bool)
+                watermark_outline.Visible = bool
+            end
+
+            local hb_conn = game:GetService("RunService").Heartbeat:Connect(function()
+                if watermark_outline and watermark_outline.Parent and watermark_outline.Visible then
+                    title_text.Text = format_title(cfg.script_name, cfg.suffix)
+                end
+            end)
+
+            if library.connections then
+                table.insert(library.connections, hb_conn)
+            end
+
+            return cfg
+        end
 		function library:login_window(options)
 			local cfg = {
 				prefix = options.prefix or "ether",

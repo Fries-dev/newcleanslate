@@ -365,21 +365,6 @@ local function applyCustomModel(character)
     end
 end
 local function SmoothAim(targetPart, dt)
-    if not targetPart or not targetPart.Parent then
-        return
-    end
-
-    local smoothing = math.clamp(SETTINGS.Aimlock.Smoothing, 1, 20)
-    local cameraPosition = Camera.CFrame.Position
-
-    local targetCFrame = CFrame.lookAt(
-        cameraPosition,
-        targetPart.Position
-    )
-
-    local alpha = 1 - math.exp(-smoothing * dt)
-
-    Camera.CFrame = Camera.CFrame:Lerp(targetCFrame, alpha)
 end
 local function SmoothCameraTo(targetPart, smoothing, dt)
     if not targetPart or not targetPart.Parent then
