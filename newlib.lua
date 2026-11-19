@@ -1927,7 +1927,8 @@
 				watermark_outline.Visible = bool
 			end
 
-			RunService.Heartbeat:Connect(function()
+			-- Fixed: Using game:GetService("RunService") directly
+			game:GetService("RunService").Heartbeat:Connect(function()
 				if watermark_outline.Visible then
 					title_text.Text = format_title(cfg.tag, cfg.suffix)
 				end
