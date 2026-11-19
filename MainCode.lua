@@ -53,16 +53,22 @@ end
 -- Load UI Library
 local library, themes = loadstring(game:HttpGet("https://raw.githubusercontent.com/Fries-dev/newcleanslate/refs/heads/main/newlib.lua"))()
 
-local window = library:window({name = os.date('Atlanta |  - %b %d %Y'), size = dim2(0, 750, 0, 782)})
+local hub_name = "ether" -- Or whatever you named your window
 
-local Aiming = window:tab({name = "Aiming"})
-local Visuals = window:tab({name = "Visuals"})
-local Misc = window:tab({name = "Misc"})
+local window = library:window({
+    name = hub_name .. " | - Aug 04 2025",
+    size = UDim2.new(0, 600, 0, 450)
+})
+
 local watermark = library:custom_watermark({
-    title = 'name<font color="#55aaff">client</font>',
+    prefix = hub_name, -- Uses your window/hub name
+    suffix = "client", -- Automatically colored with themes.preset.accent
     info = "loading...",
     position = UDim2.new(0, 20, 0, 20)
 })
+local Aiming = window:tab({name = "Aiming"})
+local Visuals = window:tab({name = "Visuals"})
+local Misc = window:tab({name = "Misc"})
 
 do
     local column = Aiming:column() 
