@@ -1777,9 +1777,18 @@
 					section:button({name = "Unload Menu", callback = function()
 						library:load_config(library.old_config)
 
-						-- 1. Destroy your custom watermark GUI explicitly
+						-- Bulletproof manual cleanup for the standalone watermark GUI
 						pcall(function()
-							watermark.destroy()
+							for _, gui in ipairs(game:GetService("CoreGui"):GetChildren()) do
+								if gui.Name == "EtherWatermarkGui" then
+									gui:Destroy()
+								end
+							end
+							for _, gui in ipairs(game:GetService("Players").LocalPlayer.PlayerGui:GetChildren()) do
+								if gui.Name == "EtherWatermarkGui" then
+									gui:Destroy()
+								end
+							end
 						end)
 
 						for _, gui in library.guis do 
