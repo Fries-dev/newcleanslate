@@ -5669,6 +5669,8 @@
 		end 
 
 		function library:button_holder(options) 
+			options = options or {} -- <--- Add this safety check
+			
 			local cfg = {
 				flag = options.flag or "hi", 
 				visible = options.visible or true,
@@ -5719,7 +5721,7 @@
 			library.visible_flags[cfg.flag] = cfg.set_element_visible
 
 			return setmetatable(cfg, library)
-		end 
+		end
 
 		function library:button(options)
 			local cfg = {

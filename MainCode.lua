@@ -1,7 +1,6 @@
 
 local CoreGuiRef = cloneref and cloneref(game:GetService("CoreGui")) or game:GetService("CoreGui")
 local gethuiFn = gethui or function() return CoreGuiRef end
-
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
@@ -17,9 +16,7 @@ local zoomKeyActive = false
 local SETTINGS = {
     Fov = { Enabled = false, Amount = 70, Base = Camera.FieldOfView },
     Zoom = { Enabled = false, Amount = 30, AnimationSpeed = 8 },
-    player = { Enabled = false },
-    silent = { Enabled = false },
-    wallbang = { Enabled = false }
+    player = { Enabled = false }
 }
 
 -- Load Sense ESP Library
@@ -31,6 +28,8 @@ local success, config = pcall(function()
     if not chunk then error(err) end
     return chunk()
 end)
+local SoundService = game:GetService("SoundService")
+
 
 if success and type(config) == "table" then
     local function applySettings(target, source)
@@ -50,31 +49,100 @@ else
     warn("Failed to load config from GitHub. Error: ", config)
 end
 
--- Load the library directly from your local file
-local library, themes = loadstring(readfile("newcleanslate/newlib.lua"))()
+-- Try downloading the library with detailed error tracking
+local success, response = pcall(function()
+    return game:HttpGet("https://raw.githubusercontent.com/Fries-dev/newcleanslate/refs/heads/main/newlib.lua?v=9999999")
+end)
 
--- Run your script components
-local hub_name = "ether"
+-- Check if the HTTP request failed completely
+if not success then
+    warn("[Loader Error] Failed to connect to GitHub. Check your internet connection or URL.")
+    return
+end
 
-library:login_window({
+-- Check if GitHub returned a 404 Not Found page
+if response == "404: Not Found" or response:sub(1, 9) == "Not Found" then
+    warn("[Loader Error] newlib.lua was not found (404). Check the branch name and repository path.")
+    return
+end
+
+-- Compile the downloaded string into a Lua chunk
+local libChunk, compileErr = loadstring(response)
+if not libChunk then
+    warn("[Loader Error] Syntax error detected in newlib.lua:\n" .. tostring(compileErr))
+    return
+end
+
+-- Safely execute the library chunk
+local runSuccess, library, themes = pcall(libChunk)
+if not runSuccess then
+    warn("[Loader Error] Runtime error while initializing newlib.lua:\n" .. tostring(library))
+    return
+end
+
+-- Success! Proceed with your script
+local hub_name = "LizardWare"
+local suffix_name = " "
+print("[Loader] newlib.lua loaded successfully!")
+
+-- 1. Run the login window and capture the role
+local success, userRole = library:login_window({
     prefix = hub_name,
-    suffix = "client",
+    suffix = suffix_name,
     credentials = {
         ["admin"] = "ether2026",
-        ["networph"] = "devkey123"
+        ["lizard"] = "1",
+        ["dev"] = "3"
     }
 })
 
-local window = library:window({
-    name = hub_name .. " | - Nov 18 2026",
-    size = UDim2.new(0, 600, 0, 450)
+-- 2. Define role text and color based on who logged in
+local watermark_role = (userRole == "dev") and "Developer" or "Customer"
+local role_color_hex = (userRole == "dev") and "00FF7F" or "6b6a85" -- Green for dev, White for customer
+
+-- 3. Create your custom watermark
+local watermark = library:custom_watermark({
+    script_name = hub_name,
+    suffix = suffix_name,
+    role = watermark_role,
+    role_color = role_color_hex,
+    position = dim2(0.5, -100, 0, 100) -- Use dim2 if your library uses custom UDim2 wrappers
 })
 
-local watermark = library:custom_watermark({
-    tag = "admin",
-    suffix = "client",
-    position = UDim2.new(0, 20, 0, 60)
+-- 4. Open your main window
+local window = library:window({
+    name = hub_name .. " | - Nov 18 2026",
+    size = dim2(0, 600, 0, 450)
 })
+local frames = 0
+local lastTime = tick()
+local fps = 60
+RunService.RenderStepped:Connect(function()
+    frames = frames + 1
+    local now = tick()
+    if now - lastTime >= 1 then
+        fps = math.round(frames / (now - lastTime))
+        frames = 0
+        lastTime = now
+    end
+
+    local ping = 0
+    pcall(function()
+        ping = math.round(LocalPlayer:GetNetworkPing() * 1000)
+    end)
+
+    local currentTime = os.date("%H:%M:%S")
+    local coloredRole = string.format('<font color="#%s">%s</font>', role_color_hex, watermark_role)
+
+    watermark.change_info(string.format(
+        "%s | %d fps | %dms | %s | %s",
+        LocalPlayer.Name,
+        fps,
+        ping,
+        coloredRole,
+        currentTime
+    ))
+end)
 
 
 local Aiming = window:tab({name = "Aiming"})
@@ -91,6 +159,7 @@ do
         default = SETTINGS.player.Enabled, 
         value = SETTINGS.player.Enabled, 
         callback = function(v) 
+        
             SETTINGS.player.Enabled = v
             if Sense.teamSettings and Sense.teamSettings.enemy then
                 Sense.teamSettings.enemy.enabled = v
@@ -119,15 +188,6 @@ do
             end
         end
     })
-    selec:toggle({
-        name = "Silent aim", 
-        flag = "Silent_aim", 
-        default = false, 
-        value = false, 
-        callback = function(v) 
-            SETTINGS.silent.Enabled = v 
-        end
-    })
     local FovSec = selec
     FovSec:toggle({name = "FOV Changer", flag = "FovChanger_Enabled", value = SETTINGS.Fov.Enabled, callback = function(v) SETTINGS.Fov.Enabled = v end})
     FovSec:slider({name = "FOV Amount", min = 70, max = 120, default = SETTINGS.Fov.Amount, interval = 1, suffix = " fov", flag = "FovChanger_Amount", callback = function(v) SETTINGS.Fov.Amount = v end})
@@ -141,37 +201,73 @@ do
     })
     FovSec:slider({name = "Zoom Amount", min = 10, max = 70, default = SETTINGS.Zoom.Amount, interval = 1, suffix = " fov", flag = "FovZoom_Amount", callback = function(v) SETTINGS.Zoom.Amount = v end})
 end
-local frames = 0
-local lastTime = tick()
-local fps = 60
 
-RunService.RenderStepped:Connect(function()
-    frames = frames + 1
-    local now = tick()
-    if now - lastTime >= 1 then
-        fps = math.round(frames / (now - lastTime))
-        frames = 0
-        lastTime = now
+
+
+
+-- Example: Toggle with audio
+Misc:toggle({
+    name = "Speed Boost",
+    flag = "speed_toggle",
+    default = false,
+    callback = function(state)
+        
+        local player = game:GetService("Players").LocalPlayer
+        if player.Character and player.Character:FindFirstChild("Humanoid") then
+            player.Character.Humanoid.WalkSpeed = state and 50 or 16
+        end
     end
+})
+-- Spin Player Variables
+local spinning = false
+local spinConnection = nil
+local spinSpeed = 10
 
-    local ping = 0
-    pcall(function()
-        ping = math.round(LocalPlayer:GetNetworkPing() * 1000)
-    end)
 
-    -- Format: username | fps | ping | tag | time
-    local currentTime = os.date("%H:%M:%S")
-    local tagStatus = "admin" -- matches your tag
+-- 2. Spin Speed Slider
+Misc:slider({
+    name = "Spin Speed",
+    flag = "spin_speed",
+    min = 1,
+    max = 50,
+    default = 10,
+    callback = function(value)
+        spinSpeed = value
+    end
+})
 
-    watermark.change_info(string.format(
-        "%s | %d fps | %dms | %s | %s",
-        LocalPlayer.Name,
-        fps,
-        ping,
-        tagStatus,
-        currentTime
-    ))
-end)
+-- 3. Main Spin Toggle
+Misc:toggle({
+    name = "Spin Player",
+    flag = "spin_toggle",
+    callback = function(state)
+        spinning = state
+        
+        if spinning then
+            spinConnection = game:GetService("RunService").RenderStepped:Connect(function()
+                local character = game:GetService("Players").LocalPlayer.Character
+                if character and character:FindFirstChild("HumanoidRootPart") then
+                    local rootPart = character.HumanoidRootPart
+                    
+                    if isLocalMode then
+                        -- For a true client-side visual effect without network replication,
+                        -- you can manipulate local joints or visual orientation. 
+                        -- (Note: Direct CFrame changes on RootPart will always replicate due to network ownership).
+                        rootPart.CFrame = rootPart.CFrame * CFrame.Angles(0, math.rad(spinSpeed), 0)
+                    else
+                        -- Server-replicated spin logic
+                        rootPart.CFrame = rootPart.CFrame * CFrame.Angles(0, math.rad(spinSpeed), 0)
+                    end
+                end
+            end)
+        else
+            if spinConnection then
+                spinConnection:Disconnect()
+                spinConnection = nil
+            end
+        end
+    end
+})
 -- Visuals Tab Setup (Dynamic ESP Settings & Model Transformer)
 do
     local column = Visuals:column()
