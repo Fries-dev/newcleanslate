@@ -11,11 +11,15 @@ local hex = Color3.fromHex
 local LocalPlayer = Players.LocalPlayer
 
 local zoomKeyActive = false
+local target = nil
+
 
 local SETTINGS = {
     Fov = { Enabled = false, Amount = 70, Base = Camera.FieldOfView },
     Zoom = { Enabled = false, Amount = 30, AnimationSpeed = 8 },
-    player = { Enabled = false }
+    player = { Enabled = false },
+    silent = { Enabled = false },
+    wallbang = { Enabled = false },
 }
 
 -- Load Sense ESP Library
@@ -235,6 +239,49 @@ Misc:slider({
     end
 })
 
+Misc:toggle({
+    name = "Silent aim",
+    flag = "Silent_aim",
+    callback = function(v)
+        spinning = state
+        
+        if spinning then
+            spinConnection = game:GetService("RunService").RenderStepped:Connect(function()
+                local character = game:GetService("Players").LocalPlayer.Character
+                if character and character:FindFirstChild("HumanoidRootPart") then
+                    local rootPart = character.HumanoidRootPart
+                    
+                    if isLocalMode then
+                        -- For a true client-side visual effect without network replication,
+                        -- you can manipulate local joints or visual orientation. 
+                        -- (Note: Direct CFrame changes on RootPart will always replicate due to network ownership).
+                        rootPart.CFrame = rootPart.CFrame * CFrame.Angles(0, math.rad(spinSpeed), 0)
+                    else
+                        -- Server-replicated spin logic
+                        rootPart.CFrame = rootPart.CFrame * CFrame.Angles(0, math.rad(spinSpeed), 0)
+                    end
+                end
+            end)
+        else
+            if spinConnection then
+                spinConnection:Disconnect()
+                spinConnection = nil
+            end
+        end
+    end
+})
+
+Misc:slider({
+    name = "Spin Speed",
+    flag = "spin_speed",
+    min = 1,
+    max = 50,
+    default = 10,
+    callback = function(value)
+        spinSpeed = value
+    end
+})
+
 -- 3. Main Spin Toggle
 Misc:toggle({
     name = "Spin Player",
@@ -433,6 +480,74 @@ do
                 end
             })
     end
+
+local function isVisible(target)
+    local origin = game.workspace.CurrentCamera.CFrame
+    local params = RaycastParams.new()
+    params.FilterType = Enum.RaycastFilterType.Exclude
+    params.FilterDescendantsInstances = {game.Players.LocalPlayer.Character}
+    params.IgnoreWater = true
+
+    local direction = (target.Position - origin.Position)
+    local result = workspace:Raycast(origin.Position, direction, params)
+
+    if result then
+        return game.Players:GetPlayerFromCharacter(result.Instance:FindFirstAncestorOfClass("Model")) ~= nil
+    else
+        return true
+    end
+end
+
+local function GetClosestPlayer()
+    local closestDistance = math.huge
+    local closest = nil
+    local camera = workspace.CurrentCamera
+    local wallbangOn = SETTINGS.wallbang.Enabled
+    for _, v in pairs(game.Players:GetPlayers()) do
+        if v == game.Players.LocalPlayer then continue end
+        
+        local char = v.Character
+        if not char then continue end
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if not hrp then continue end
+        local hum = char:FindFirstChild("Humanoid")
+        if not hum or hum.Health <= 0 then continue end
+
+        local head = char:FindFirstChild("Head")
+        if not head then continue end
+        local screenPos, onScreen = camera:WorldToViewportPoint(hrp.Position)
+        if onScreen then
+            local distance = (Vector2.new(screenPos.X, screenPos.Y) - camera.ViewportSize / 2).Magnitude
+            if distance < closestDistance then
+                if not wallbangOn then
+                    if not isVisible(head) then continue end
+                end
+                closestDistance = distance
+                closest = head
+            end
+        end
+    end
+
+    return closest
+end
+
+game:GetService("RunService").RenderStepped:Connect(function()
+    target = GetClosestPlayer()
+end)
+
+local cast = filtergc("table", {Keys = {"cast"}}, true).cast
+
+local old
+old = hookfunction(cast, function(p1,p2,p3)
+    local silentOn = SETTINGS.silent.Enabled
+    if silenton then
+        if target then
+            return target, target.Position, Vector3.new(0,1,0), target.Material
+        end
+    end
+    return old(p1,p2,p3)
+end)
+
 -- FOV & Zoom Render Loop
 do
     local baseFov = Camera.FieldOfView
@@ -469,6 +584,30 @@ for index, value in themes.preset do
         library:update_theme(index, value)
     end)
 end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 task.wait()
 
