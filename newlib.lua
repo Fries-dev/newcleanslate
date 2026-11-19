@@ -5255,7 +5255,220 @@
 
 			return setmetatable(cfg, library)
 		end 
+		function library:game_selector(options)
+			local cfg = {
+				prefix = options.prefix or "Game",
+				suffix = options.suffix or "Selector",
+				games = options.games or {
+					{ name = "Default Game", id = 0, icon = "rbxassetid://0" }
+				},
+				callback = options.callback or function(selectedGame) end,
+				selected = nil
+			}
 
+			local accent_hex = themes.preset.accent:ToHex()
+
+			-- Main Outer Outline (Centered on screen)
+			local selector_outline = library:create("Frame", {
+				Parent = sgui,
+				Name = "GameSelectorWindow",
+				AnchorPoint = vec2(0.5, 0.5),
+				Position = dim2(0.5, 0, 0.5, 0),
+				Size = dim2(0, 300, 0, 220),
+				BorderSizePixel = 0,
+				BackgroundColor3 = themes.preset.outline
+			}) 
+			library:apply_theme(selector_outline, "outline", "BackgroundColor3")
+			library:draggify(selector_outline)
+
+			-- Inline Border
+			local selector_inline = library:create("Frame", {
+				Parent = selector_outline,
+				Position = dim2(0, 1, 0, 1),
+				Size = dim2(1, -2, 1, -2),
+				BorderSizePixel = 0,
+				BackgroundColor3 = themes.preset.inline
+			}) 
+			library:apply_theme(selector_inline, "inline", "BackgroundColor3")
+
+			-- Background with Contrast Gradient
+			local selector_bg = library:create("Frame", {
+				Parent = selector_inline,
+				Position = dim2(0, 1, 0, 1),
+				Size = dim2(1, -2, 1, -2),
+				BorderSizePixel = 0,
+				BackgroundColor3 = rgb(255, 255, 255)
+			})
+			local bg_grad = library:create("UIGradient", {
+				Parent = selector_bg,
+				Rotation = 90,
+				Color = rgbseq{
+					rgbkey(0, rgb(41, 41, 55)),
+					rgbkey(1, rgb(35, 35, 47))
+				}
+			}) 
+			library:apply_theme(bg_grad, "contrast", "Color")
+
+			-- Top Accent Bar
+			local top_accent = library:create("Frame", {
+				Parent = selector_outline,
+				Position = dim2(0, 2, 0, 2),
+				Size = dim2(1, -4, 0, 2),
+				BorderSizePixel = 0,
+				BackgroundColor3 = themes.preset.accent
+			}) 
+			library:apply_theme(top_accent, "accent", "BackgroundColor3")
+
+			-- Header Title
+			local title_label = library:create("TextLabel", {
+				Parent = selector_bg,
+				FontFace = library.font,
+				TextColor3 = themes.preset.text,
+				Text = string.format('  %s<font color="#%s">%s</font>', cfg.prefix, accent_hex, cfg.suffix),
+				Size = dim2(1, 0, 0, 20),
+				Position = dim2(0, 0, 0, 2),
+				BackgroundTransparency = 1,
+				TextXAlignment = Enum.TextXAlignment.Left,
+				TextSize = 12,
+				RichText = true
+			})
+			library:create("UIStroke", { Parent = title_label, LineJoinMode = Enum.LineJoinMode.Miter })
+
+			-- Header Divider
+			local divider = library:create("Frame", {
+				Parent = selector_outline,
+				Position = dim2(0, 2, 0, 23),
+				Size = dim2(1, -4, 0, 1),
+				BorderSizePixel = 0,
+				BackgroundColor3 = themes.preset.inline
+			}) 
+			library:apply_theme(divider, "inline", "BackgroundColor3")
+
+			-- Game Icon Preview Box
+			local icon_outline = library:create("Frame", {
+				Parent = selector_bg,
+				Position = dim2(0, 12, 0, 32),
+				Size = dim2(0, 80, 0, 80),
+				BorderSizePixel = 0,
+				BackgroundColor3 = themes.preset.outline
+			})
+			library:apply_theme(icon_outline, "outline", "BackgroundColor3")
+
+			local icon_bg = library:create("Frame", {
+				Parent = icon_outline,
+				Position = dim2(0, 1, 0, 1),
+				Size = dim2(1, -2, 1, -2),
+				BorderSizePixel = 0,
+				BackgroundColor3 = themes.preset.inline
+			})
+			library:apply_theme(icon_bg, "inline", "BackgroundColor3")
+
+			local game_icon = library:create("ImageLabel", {
+				Parent = icon_bg,
+				Position = dim2(0, 1, 0, 1),
+				Size = dim2(1, -2, 1, -2),
+				BackgroundTransparency = 1,
+				Image = cfg.games[1].icon or ""
+			})
+
+			-- Game Title / Info Label
+			local info_label = library:create("TextLabel", {
+				Parent = selector_bg,
+				FontFace = library.font,
+				TextColor3 = themes.preset.text,
+				Text = cfg.games[1].name,
+				Size = dim2(1, -110, 0, 80),
+				Position = dim2(0, 100, 0, 32),
+				BackgroundTransparency = 1,
+				TextXAlignment = Enum.TextXAlignment.Left,
+				TextYAlignment = Enum.TextYAlignment.Center,
+				TextSize = 13,
+				TextWrapped = true
+			})
+			library:create("UIStroke", { Parent = info_label, LineJoinMode = Enum.LineJoinMode.Miter })
+
+			-- Selection Dropdown / Button (Cycles through games or use a dropdown if preferred)
+			-- For a clean picker button:
+			local btn_outline = library:create("Frame", {
+				Parent = selector_bg,
+				Position = dim2(0, 12, 0, 124),
+				Size = dim2(1, -24, 0, 26),
+				BorderSizePixel = 0,
+				BackgroundColor3 = themes.preset.outline
+			}) 
+			library:apply_theme(btn_outline, "outline", "BackgroundColor3")
+
+			local select_btn = library:create("TextButton", {
+				Parent = btn_outline,
+				Position = dim2(0, 1, 0, 1),
+				Size = dim2(1, -2, 1, -2),
+				BorderSizePixel = 0,
+				BackgroundColor3 = themes.preset.inline,
+				FontFace = library.font,
+				TextColor3 = themes.preset.text,
+				Text = "Switch Game: " .. cfg.games[1].name,
+				TextSize = 12,
+				AutoButtonColor = false
+			}) 
+			library:apply_theme(select_btn, "inline", "BackgroundColor3")
+			library:create("UIStroke", { Parent = select_btn, LineJoinMode = Enum.LineJoinMode.Miter })
+
+			local currentIndex = 1
+			select_btn.MouseButton1Click:Connect(function()
+				currentIndex = currentIndex + 1
+				if currentIndex > #cfg.games then
+					currentIndex = 1
+				end
+				local currentGame = cfg.games[currentIndex]
+				cfg.selected = currentGame
+				
+				select_btn.Text = "Switch Game: " .. currentGame.name
+				info_label.Text = currentGame.name
+				game_icon.Image = currentGame.icon
+			end)
+			cfg.selected = cfg.games[1]
+
+			-- Confirm Launch Button
+			local confirm_outline = library:create("Frame", {
+				Parent = selector_bg,
+				Position = dim2(0, 12, 0, 158),
+				Size = dim2(1, -24, 0, 28),
+				BorderSizePixel = 0,
+				BackgroundColor3 = themes.preset.outline
+			}) 
+			library:apply_theme(confirm_outline, "outline", "BackgroundColor3")
+
+			local confirm_btn = library:create("TextButton", {
+				Parent = confirm_outline,
+				Position = dim2(0, 1, 0, 1),
+				Size = dim2(1, -2, 1, -2),
+				BorderSizePixel = 0,
+				BackgroundColor3 = themes.preset.inline,
+				FontFace = library.font,
+				TextColor3 = themes.preset.text,
+				Text = "Launch Selected Game",
+				TextSize = 12,
+				AutoButtonColor = false
+			}) 
+			library:apply_theme(confirm_btn, "inline", "BackgroundColor3")
+			library:create("UIStroke", { Parent = confirm_btn, LineJoinMode = Enum.LineJoinMode.Miter })
+
+			confirm_btn.MouseEnter:Connect(function()
+				confirm_btn.BackgroundColor3 = themes.preset.accent
+			end)
+			confirm_btn.MouseLeave:Connect(function()
+				confirm_btn.BackgroundColor3 = themes.preset.inline
+			end)
+
+			confirm_btn.MouseButton1Click:Connect(function()
+				if cfg.selected then
+					selector_outline:Destroy()
+					cfg.callback(cfg.selected)
+				end
+			end)
+
+			return cfg
+		end
 		function library:list(options)
 			local cfg = {
 				callback = options and options.callback or function() end, 
@@ -6280,6 +6493,7 @@
 
 			return setmetatable(cfg, library)
 		end 
+		
 	-- 
 -- 
 
