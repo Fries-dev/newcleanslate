@@ -10,6 +10,7 @@ local Client = Players.LocalPlayer
 local target = nil
 local dim2 = UDim2.new
 local hex = Color3.fromHex 
+local LocalPlayer = Players.LocalPlayer
 
 local zoomKeyActive = false
 
@@ -50,14 +51,18 @@ else
 end
 
 -- Load UI Library
-local library, themes = loadstring(game:HttpGet("https://raw.githubusercontent.com/i77lhm/Libraries/refs/heads/main/Atlanta/Library.lua"))()
+local library, themes = loadstring(game:HttpGet("https://raw.githubusercontent.com/Fries-dev/newcleanslate/refs/heads/main/newlib.lua"))()
 
 local window = library:window({name = os.date('Atlanta |  - %b %d %Y'), size = dim2(0, 750, 0, 782)})
 
 local Aiming = window:tab({name = "Aiming"})
 local Visuals = window:tab({name = "Visuals"})
 local Misc = window:tab({name = "Misc"})
-
+local watermark = library:custom_watermark({
+    title = 'name<font color="#55aaff">client</font>',
+    info = "loading...",
+    position = UDim2.new(0, 20, 0, 20)
+})
 
 do
     local column = Aiming:column() 
@@ -119,7 +124,33 @@ do
     })
     FovSec:slider({name = "Zoom Amount", min = 10, max = 70, default = SETTINGS.Zoom.Amount, interval = 1, suffix = " fov", flag = "FovZoom_Amount", callback = function(v) SETTINGS.Zoom.Amount = v end})
 end
+local frames = 0
+local lastTime = tick()
+local fps = 60
 
+RunService.RenderStepped:Connect(function()
+    frames = frames + 1
+    local now = tick()
+    if now - lastTime >= 1 then
+        fps = math.round(frames / (now - lastTime))
+        frames = 0
+        lastTime = now
+    end
+
+    local ping = 0
+    pcall(function()
+        ping = math.round(LocalPlayer:GetNetworkPing() * 1000)
+    end)
+
+    watermark.change_info(string.format(
+        "%s | %d fps | %dms | %d/%d",
+        LocalPlayer.Name,
+        fps,
+        ping,
+        #Players:GetPlayers(),
+        Players.MaxPlayers
+    ))
+end)
 -- Visuals Tab Setup (Dynamic ESP Settings & Model Transformer)
 do
     local column = Visuals:column()
@@ -256,56 +287,7 @@ do
         end
     })
 end
-local function isVisible(target)
-    local origin = game.workspace.CurrentCamera.CFrame
-    local params = RaycastParams.new()
-    params.FilterType = Enum.RaycastFilterType.Exclude
-    params.FilterDescendantsInstances = {game.Players.LocalPlayer.Character}
-    params.IgnoreWater = true
 
-    local direction = (target.Position - origin.Position)
-    local result = workspace:Raycast(origin.Position, direction, params)
-
-    if result then
-        return game.Players:GetPlayerFromCharacter(result.Instance:FindFirstAncestorOfClass("Model")) ~= nil
-    else
-        return true
-    end
-end
-local function GetClosestPlayer()
-    local closestDistance = math.huge
-    local closest = nil
-    local camera = workspace.CurrentCamera
-
-    local silentOn = SETTINGS.silent.Enabled
-    local wallbangOn = SETTINGS.wallbang.Enabled
-    for _, v in pairs(game.Players:GetPlayers()) do
-        if v == game.Players.LocalPlayer then continue end
-        
-        local char = v.Character
-        if not char then continue end
-        local hrp = char:FindFirstChild("HumanoidRootPart")
-        if not hrp then continue end
-        local hum = char:FindFirstChild("Humanoid")
-        if not hum or hum.Health <= 0 then continue end
-
-        local head = char:FindFirstChild("Head")
-        if not head then continue end
-        local screenPos, onScreen = camera:WorldToViewportPoint(hrp.Position)
-        if onScreen then
-            local distance = (Vector2.new(screenPos.X, screenPos.Y) - camera.ViewportSize / 2).Magnitude
-            if distance < closestDistance then
-                if wallbangOn then
-                    if not isVisible(head) then continue end
-                end
-                closestDistance = distance
-                closest = head
-            end
-        end
-    end
-
-    return closest
-end
 -- FOV & Zoom Render Loop
 do
     local baseFov = Camera.FieldOfView
@@ -332,26 +314,7 @@ do
         Camera.FieldOfView = displayFov
     end)
 end
-game:GetService("RunService").RenderStepped:Connect(function()
-    target = GetClosestPlayer()
-end)
-local cast = filtergc("table", {Keys = {"cast"}}, true).cast
 
-local old
-do
-    local silentOn = SETTINGS.silent.Enabled
-    local wallbangOn = SETTINGS.wallbang.Enabled
-    if silentOn then
-        old = hookfunction(cast, function(p1,p2,p3)
-            if silentOn then
-                if target then
-                    return target, target.Position, Vector3.new(0,1,0), target.Material
-                end
-            end
-            return old(p1,p2,p3)
-        end)
-    end
-end
 
 -- Initialisation stuff
 library:config_list_update()

@@ -1827,9 +1827,16 @@
 		end
 		function library:custom_watermark(options)
 			local cfg = {
-				title = options.title or 'ether<font color="#55aaff">client</font>',
+				prefix = options.prefix or options.name or "ether",
+				suffix = options.suffix or "client",
 				info = options.info or os.date('drain.lol | %b %d %Y | %H:%M')
 			}
+
+			-- Helper to format the title using the current theme's accent hex color
+			local function format_title(pre, suf)
+				local accent_hex = themes.preset.accent:ToHex()
+				return string.format('  %s<font color="#%s">%s</font>  ', pre, accent_hex, suf)
+			end
 
 			local watermark_outline = library:create("Frame", {
 				Parent = sgui,
