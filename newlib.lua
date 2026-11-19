@@ -1775,31 +1775,48 @@
 						library:load_config(library.old_config)
 					end})
 					section:button({name = "Unload Menu", callback = function()
+						print("[DEBUG] Unload button clicked!")
 						library:load_config(library.old_config)
 
-						-- Bulletproof manual cleanup for the standalone watermark GUI
+						-- Bulletproof manual cleanup with console prints
 						pcall(function()
+							local foundWatermark = false
 							for _, gui in ipairs(game:GetService("CoreGui"):GetChildren()) do
 								if gui.Name == "EtherWatermarkGui" then
 									gui:Destroy()
+									foundWatermark = true
+									print("[DEBUG] Successfully destroyed EtherWatermarkGui from CoreGui!")
 								end
 							end
 							for _, gui in ipairs(game:GetService("Players").LocalPlayer.PlayerGui:GetChildren()) do
 								if gui.Name == "EtherWatermarkGui" then
 									gui:Destroy()
+									foundWatermark = true
+									print("[DEBUG] Successfully destroyed EtherWatermarkGui from PlayerGui!")
 								end
+							end
+							if not foundWatermark then
+								print("[DEBUG] Warning: EtherWatermarkGui was not found in CoreGui or PlayerGui during unload.")
 							end
 						end)
 
 						for _, gui in library.guis do 
-							gui:Destroy() 
+							if gui and gui.Parent then
+								gui:Destroy() 
+							end
 						end 
 
 						for _, connection in library.connections do 
-							connection:Disconnect() 
+							if connection and connection.Connected then
+								connection:Disconnect() 
+							end
 						end
 
-						blur:Destroy()
+						if blur then
+							blur:Destroy()
+						end
+
+						print("[DEBUG] Unload sequence finished.")
 					end})
 			-- 
 					
