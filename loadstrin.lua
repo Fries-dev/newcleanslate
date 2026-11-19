@@ -322,7 +322,7 @@ library:game_selector({
         -- Put your code here using gameData.id or gameData.name!
         if gameData.id == 6872265039 then
             print("Running BedWars script features...")
-            local loadstring(game:HttpGet("https://raw.githubusercontent.com/Fries-dev/newcleanslate/refs/heads/main/universal.lua"))()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/Fries-dev/newcleanslate/refs/heads/main/universal.lua"))()
             
         elseif gameData.id == 2753915549 then
             print("Running Blox Fruits script features...")
