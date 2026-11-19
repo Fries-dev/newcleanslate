@@ -1982,12 +1982,16 @@
 			return cfg
 		end
 		function library:login_window(options)
+-- Add role storage to your config table
 			local cfg = {
 				prefix = options.prefix or "ether",
 				suffix = options.suffix or "client",
-				credentials = options.credentials or { ["dev"] = "1234" },
-				authenticated = false
+				credentials = options.credentials or { ["dev"] = "1234", ["user"] = "password" }, -- add customer credentials here if needed
+				authenticated = false,
+				role = "customer" -- Default role
 			}
+
+            -- ... [keep all your UI creation code the same until button click] ...
 
 			local accent_hex = themes.preset.accent:ToHex()
 
@@ -2153,18 +2157,28 @@
 				if cfg.credentials[u] and cfg.credentials[u] == p then
 					status_label.TextColor3 = rgb(100, 255, 120)
 					status_label.Text = "Access granted! Loading..."
+					
+					-- Set role based on username
+					if u == "dev" then
+						cfg.role = "dev"
+					else
+						cfg.role = "customer"
+					end
+
 					task.wait(0.6)
 					login_outline:Destroy()
 					cfg.authenticated = true
 				else
 					status_label.TextColor3 = rgb(255, 90, 90)
-					status_label.Text = "Invalid developer credentials."
+					status_label.Text = "Invalid credentials."
 				end
 			end)
 
 			-- Pause script execution until authenticated
 			repeat task.wait() until cfg.authenticated
-			return true
+			
+			-- Return both success and the assigned role so your main script can use it
+			return true, cfg.role
 		end
 		function library:watermark(options) 
 			local cfg = {
