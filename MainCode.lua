@@ -320,8 +320,29 @@ do
     local modelSec = column:section({name = "Model Transformer", toggle = false})
     local transformedModel = nil
     local modelConnection = nil
-    local savedAccessories = {}
     local originalTransparencies = {}
+
+    -- Table of different models to choose from (Name + Asset ID)
+    local modelList = {
+        ["Model Option 1"] = "rbxassetid://138151705692565",
+        ["Model Option 2"] = "rbxassetid://112586636995159", -- Replace with your second asset ID
+        ["Model Option 3"] = "rbxassetid://110172740686284", -- Replace with your third asset ID
+    }
+
+    local selectedAssetId = "rbxassetid://138151705692565" -- Default selection
+
+    -- Dropdown to select the model
+    modelSec:dropdown({
+        name = "Select Model",
+        flag = "ModelTransformer_Selection",
+        items = {"Model Option 1", "Model Option 2", "Model Option 3"},
+        default = "Model Option 1",
+        callback = function(selectedName)
+            if modelList[selectedName] then
+                selectedAssetId = modelList[selectedName]
+            end
+        end
+    })
 
     modelSec:toggle({
         name = "Transform into Model",
@@ -338,7 +359,7 @@ do
             if not character or not character:FindFirstChild("HumanoidRootPart") then return end
 
             local success, objects = pcall(function()
-                return game:GetObjects("rbxassetid://138151705692565")
+                return game:GetObjects(selectedAssetId)
             end)
 
             if success and objects and #objects > 0 then
@@ -359,7 +380,7 @@ do
                 if transformedModel then
                     transformedModel.Name = "CustomPlayerModel"
                     transformedModel:PivotTo(character.HumanoidRootPart.CFrame)
-                    transformedModel.Parent = Workspace
+                    transformedModel.Parent = Workspace -- Keeps it safely in workspace permanently
 
                     local rootPart = transformedModel.PrimaryPart or transformedModel:FindFirstChildWhichIsA("BasePart")
                     for _, part in ipairs(transformedModel:GetDescendants()) do
@@ -381,15 +402,14 @@ do
                             item.Transparency = 1
                         elseif item:IsA("Decal") then
                             item.Transparency = 1
-                        elseif item:IsA("Accessory") then
-                            table.insert(savedAccessories, item)
-                            item.Parent = nil
                         end
                     end
 
+                    -- Use a persistent tracking loop that won't time out or drop out
                     modelConnection = RunService.RenderStepped:Connect(function()
+                        if not transformedModel or not transformedModel.Parent then return end
                         local isFirstPerson = (Camera.CFrame.Position - Camera.Focus.Position).Magnitude < 1.5
-                        if transformedModel and character and character:FindFirstChild("HumanoidRootPart") then
+                        if character and character:FindFirstChild("HumanoidRootPart") then
                             transformedModel:PivotTo(character.HumanoidRootPart.CFrame * CFrame.new(0, -0.5, 0))
                             for part, origTrans in pairs(originalTransparencies) do
                                 if part and part.Parent then
@@ -403,8 +423,6 @@ do
             end
         end
     })
-end
-
 -- FOV & Zoom Render Loop
 do
     local baseFov = Camera.FieldOfView
