@@ -1,6 +1,6 @@
 -- Services & Variables
 -- Replace YOUR_REPO_NAME with the repository where you saved your modified Library.lua
-local library, themes = loadstring(game:HttpGet("https://raw.githubusercontent.com/Fries-dev/newcleanslate/refs/heads/main/newlib.lua?v=" .. tick()))()
+local library, themes = loadstring(game:HttpGet("https://raw.githubusercontent.com/Fries-dev/newcleanslate/refs/heads/main/newlib.lua?=333"))()
 local CoreGuiRef = cloneref and cloneref(game:GetService("CoreGui")) or game:GetService("CoreGui")
 local gethuiFn = gethui or function() return CoreGuiRef end
 
@@ -62,7 +62,7 @@ library:login_window({
     suffix = "client",
     credentials = {
         ["admin"] = "ether2026",
-        ["networph"] = "devkey123"
+        ["dev"] = "1"
     }
 })
 
