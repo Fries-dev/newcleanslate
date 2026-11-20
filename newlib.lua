@@ -5264,6 +5264,26 @@
 				selected = nil
 			}
 			local accent_hex = themes.preset.accent:ToHex()
+			
+			-- Safely get CoreGui or PlayerGui
+			local CoreGui = game:GetService("CoreGui")
+			local Players = game:GetService("Players")
+			local LocalPlayer = Players.LocalPlayer
+			
+			-- Create a dedicated ScreenGui so it never parents to nil
+			local screenGui = Instance.new("ScreenGui")
+			screenGui.Name = "GameSelectorGui"
+			screenGui.ResetOnSpawn = false
+			
+			local success = pcall(function()
+				screenGui.Parent = CoreGui
+			end)
+			if not success or not screenGui.Parent then
+				screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+			end
+
+
+			local accent_hex = themes.preset.accent:ToHex()
 			local sgui = game:GetService("CoreGui"):FindFirstChild("ScreenGui") or game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui"):FindFirstChildOfClass("ScreenGui")
 			local currentPlaceId = game.PlaceId
 			
@@ -5287,16 +5307,16 @@
 				end
 			end
 
-			-- Main Window Outer Outline (Properly Centered with AnchorPoint 0.5, 0.5)
+			-- Use `screenGui` instead of `sgui` for your main window parent
 			local selector_outline = library:create("Frame", {
-				Parent = sgui,
+				Parent = screenGui, -- Parent it to our guaranteed ScreenGui
 				Name = "GameSelectorAdvanced",
 				AnchorPoint = Vector2.new(0.5, 0.5),
 				Position = UDim2.new(0.5, 0, 0.5, 0),
 				Size = UDim2.new(0, 460, 0, 410),
 				BorderSizePixel = 0,
 				BackgroundColor3 = themes.preset.outline
-			}) 
+			})
 			library:apply_theme(selector_outline, "outline", "BackgroundColor3")
 			library:draggify(selector_outline)
 
