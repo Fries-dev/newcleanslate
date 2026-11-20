@@ -5256,15 +5256,27 @@
 			return setmetatable(cfg, library)
 		end 
 		function library:game_selector(options)
+			print("[Debug game_selector] Initialized with options:", options)
+			
 			local cfg = {
-				prefix = options.prefix or "Game",
-				suffix = options.suffix or "Hub",
-				games = options.games or {},
-				callback = options.callback or function(selectedGame) end,
+				prefix = options and options.prefix or "Game",
+				suffix = options and options.suffix or "Hub",
+				games = options and options.games or {},
+				callback = options and options.callback or function(selectedGame) end,
 				selected = nil
 			}
-			local accent_hex = themes.preset.accent:ToHex()
 			
+			-- Check if themes exist
+			if not themes or not themes.preset or not themes.preset.accent then
+				warn("[Debug game_selector ERROR] 'themes' or 'themes.preset.accent' is missing or nil!")
+			end
+
+			local accent_hex = "FFFFFF"
+			pcall(function()
+				accent_hex = themes.preset.accent:ToHex()
+			end)
+			print("[Debug game_selector] Accent hex generated:", accent_hex)
+
 			-- Safely get CoreGui or PlayerGui
 			local CoreGui = game:GetService("CoreGui")
 			local Players = game:GetService("Players")
@@ -5275,25 +5287,36 @@
 			screenGui.Name = "GameSelectorGui"
 			screenGui.ResetOnSpawn = false
 			
-			local success = pcall(function()
+			local successParent, errParent = pcall(function()
 				screenGui.Parent = CoreGui
 			end)
-			if not success or not screenGui.Parent then
-				screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+			
+			if not successParent or not screenGui.Parent then
+				warn("[Debug game_selector] Failed to parent to CoreGui, falling back to PlayerGui. Error:", errParent)
+				local playerGui = LocalPlayer:WaitForChild("PlayerGui", 5)
+				if playerGui then
+					screenGui.Parent = playerGui
+				else
+					warn("[Debug game_selector ERROR] PlayerGui could not be found!")
+				end
+			else
+				print("[Debug game_selector] Successfully parented ScreenGui to CoreGui.")
 			end
 
-
-			local accent_hex = themes.preset.accent:ToHex()
-			local sgui = game:GetService("CoreGui"):FindFirstChild("ScreenGui") or game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui"):FindFirstChildOfClass("ScreenGui")
 			local currentPlaceId = game.PlaceId
+			print("[Debug game_selector] Current PlaceId:", currentPlaceId)
 			
 			local currentRealName = "Unknown Game"
-			pcall(function()
+			local successMarket, marketErr = pcall(function()
 				local info = game:GetService("MarketplaceService"):GetProductInfo(currentPlaceId)
 				if info and info.Name then
 					currentRealName = info.Name
 				end
 			end)
+			if not successMarket then
+				warn("[Debug game_selector WARNING] Failed to fetch MarketplaceService product info:", marketErr)
+			end
+			print("[Debug game_selector] Current Game Name:", currentRealName)
 
 			local currentGameData = { name = currentRealName, id = currentPlaceId, icon = "rbxassetid://6023426915" }
 			local otherGames = {}
@@ -5306,19 +5329,32 @@
 					table.insert(otherGames, g)
 				end
 			end
+			print("[Debug game_selector] Filtered other games count:", #otherGames)
 
-			-- Use `screenGui` instead of `sgui` for your main window parent
+			-- Check if `library:create` exists
+			if not library.create then
+				warn("[Debug game_selector ERROR] library.create function is missing!")
+				return cfg
+			end
+
+			-- Main Window Outer Outline
 			local selector_outline = library:create("Frame", {
-				Parent = screenGui, -- Parent it to our guaranteed ScreenGui
+				Parent = screenGui,
 				Name = "GameSelectorAdvanced",
 				AnchorPoint = Vector2.new(0.5, 0.5),
 				Position = UDim2.new(0.5, 0, 0.5, 0),
 				Size = UDim2.new(0, 460, 0, 410),
 				BorderSizePixel = 0,
-				BackgroundColor3 = themes.preset.outline
+				BackgroundColor3 = themes.preset.outline or Color3.fromRGB(40, 40, 40)
 			})
-			library:apply_theme(selector_outline, "outline", "BackgroundColor3")
-			library:draggify(selector_outline)
+			
+			if library.apply_theme then
+				pcall(function() library:apply_theme(selector_outline, "outline", "BackgroundColor3") end)
+			end
+			
+			if library.draggify then
+				pcall(function() library:draggify(selector_outline) end)
+			end
 
 			-- Inline Border
 			local selector_inline = library:create("Frame", {
@@ -5326,9 +5362,11 @@
 				Position = UDim2.new(0, 1, 0, 1),
 				Size = UDim2.new(1, -2, 1, -2),
 				BorderSizePixel = 0,
-				BackgroundColor3 = themes.preset.inline
+				BackgroundColor3 = themes.preset.inline or Color3.fromRGB(20, 20, 20)
 			}) 
-			library:apply_theme(selector_inline, "inline", "BackgroundColor3")
+			if library.apply_theme then
+				pcall(function() library:apply_theme(selector_inline, "inline", "BackgroundColor3") end)
+			end
 
 			-- Background Gradient
 			local selector_bg = library:create("Frame", {
@@ -5346,7 +5384,9 @@
 					ColorSequenceKeypoint.new(1, Color3.fromRGB(35, 35, 47))
 				}
 			}) 
-			library:apply_theme(bg_grad, "contrast", "Color")
+			if library.apply_theme then
+				pcall(function() library:apply_theme(bg_grad, "contrast", "Color") end)
+			end
 
 			-- Top Accent Bar
 			local top_accent = library:create("Frame", {
@@ -5354,15 +5394,17 @@
 				Position = UDim2.new(0, 2, 0, 2),
 				Size = UDim2.new(1, -4, 0, 2),
 				BorderSizePixel = 0,
-				BackgroundColor3 = themes.preset.accent
+				BackgroundColor3 = themes.preset.accent or Color3.fromRGB(255, 0, 0)
 			}) 
-			library:apply_theme(top_accent, "accent", "BackgroundColor3")
+			if library.apply_theme then
+				pcall(function() library:apply_theme(top_accent, "accent", "BackgroundColor3") end)
+			end
 
-			-- Header Title (Pushed down safely to Y:6)
+			-- Header Title
 			local title_label = library:create("TextLabel", {
 				Parent = selector_bg,
-				FontFace = library.font,
-				TextColor3 = themes.preset.text,
+				FontFace = library.font or Font.fromEnum(Enum.Font.SourceSans),
+				TextColor3 = themes.preset.text or Color3.fromRGB(255, 255, 255),
 				Text = string.format('  %s<font color="#%s">%s</font> | Game Hub', cfg.prefix, accent_hex, cfg.suffix),
 				Size = UDim2.new(1, 0, 0, 20),
 				Position = UDim2.new(0, 0, 0, 6),
@@ -5373,30 +5415,32 @@
 			})
 			library:create("UIStroke", { Parent = title_label, LineJoinMode = Enum.LineJoinMode.Miter })
 
-			-- Divider (Y:28)
+			-- Divider
 			local divider = library:create("Frame", {
 				Parent = selector_outline,
 				Position = UDim2.new(0, 2, 0, 28),
 				Size = UDim2.new(1, -4, 0, 1),
 				BorderSizePixel = 0,
-				BackgroundColor3 = themes.preset.inline
+				BackgroundColor3 = themes.preset.inline or Color3.fromRGB(20, 20, 20)
 			}) 
-			library:apply_theme(divider, "inline", "BackgroundColor3")
+			if library.apply_theme then
+				pcall(function() library:apply_theme(divider, "inline", "BackgroundColor3") end)
+			end
 
-			-- ==================== CURRENT GAME BANNER (Y:36) ====================
+			-- ==================== CURRENT GAME BANNER ====================
 			local banner_outline = library:create("Frame", {
 				Parent = selector_bg,
 				Position = UDim2.new(0, 10, 0, 36),
 				Size = UDim2.new(1, -20, 0, 64),
 				BorderSizePixel = 0,
-				BackgroundColor3 = themes.preset.accent
+				BackgroundColor3 = themes.preset.accent or Color3.fromRGB(255, 0, 0)
 			})
 			local banner_inline = library:create("Frame", {
 				Parent = banner_outline,
 				Position = UDim2.new(0, 1, 0, 1),
 				Size = UDim2.new(1, -2, 1, -2),
 				BorderSizePixel = 0,
-				BackgroundColor3 = themes.preset.inline
+				BackgroundColor3 = themes.preset.inline or Color3.fromRGB(20, 20, 20)
 			})
 			local banner_bg = library:create("Frame", {
 				Parent = banner_inline,
@@ -5405,7 +5449,7 @@
 				BorderSizePixel = 0,
 				BackgroundColor3 = Color3.fromRGB(30, 30, 40)
 			})
-			local banner_icon = library:create("ImageLabel", {
+			library:create("ImageLabel", {
 				Parent = banner_bg,
 				Position = UDim2.new(0, 7, 0, 7),
 				Size = UDim2.new(0, 48, 0, 48),
@@ -5415,8 +5459,8 @@
 
 			local banner_tag = library:create("TextLabel", {
 				Parent = banner_bg,
-				FontFace = library.font,
-				TextColor3 = themes.preset.accent,
+				FontFace = library.font or Font.fromEnum(Enum.Font.SourceSans),
+				TextColor3 = themes.preset.accent or Color3.fromRGB(255, 0, 0),
 				Text = "● ACTIVE SESSION",
 				Position = UDim2.new(0, 64, 0, 7),
 				Size = UDim2.new(1, -72, 0, 16),
@@ -5428,8 +5472,8 @@
 
 			local banner_title = library:create("TextLabel", {
 				Parent = banner_bg,
-				FontFace = library.font,
-				TextColor3 = themes.preset.text,
+				FontFace = library.font or Font.fromEnum(Enum.Font.SourceSans),
+				TextColor3 = themes.preset.text or Color3.fromRGB(255, 255, 255),
 				Text = currentGameData.name,
 				Position = UDim2.new(0, 64, 0, 23),
 				Size = UDim2.new(1, -72, 0, 32),
@@ -5441,28 +5485,28 @@
 			})
 			library:create("UIStroke", { Parent = banner_title, LineJoinMode = Enum.LineJoinMode.Miter })
 
-			-- ==================== SEARCH BAR (Y:108) ====================
+			-- ==================== SEARCH BAR ====================
 			local search_outline = library:create("Frame", {
 				Parent = selector_bg,
 				Position = UDim2.new(0, 10, 0, 108),
 				Size = UDim2.new(1, -20, 0, 26),
 				BorderSizePixel = 0,
-				BackgroundColor3 = themes.preset.outline
+				BackgroundColor3 = themes.preset.outline or Color3.fromRGB(40, 40, 40)
 			})
 			local search_inline = library:create("Frame", {
 				Parent = search_outline,
 				Position = UDim2.new(0, 1, 0, 1),
 				Size = UDim2.new(1, -2, 1, -2),
 				BorderSizePixel = 0,
-				BackgroundColor3 = themes.preset.inline
+				BackgroundColor3 = themes.preset.inline or Color3.fromRGB(20, 20, 20)
 			})
 			local search_box = library:create("TextBox", {
 				Parent = search_inline,
 				Position = UDim2.new(0, 6, 0, 0),
 				Size = UDim2.new(1, -12, 1, 0),
 				BackgroundTransparency = 1,
-				FontFace = library.font,
-				TextColor3 = themes.preset.text,
+				FontFace = library.font or Font.fromEnum(Enum.Font.SourceSans),
+				TextColor3 = themes.preset.text or Color3.fromRGB(255, 255, 255),
 				PlaceholderText = "Search games...",
 				PlaceholderColor3 = Color3.fromRGB(130, 130, 130),
 				Text = "",
@@ -5471,7 +5515,7 @@
 				ClearTextOnFocus = false
 			})
 
-			-- ==================== SCROLLING GRID (Y:142) ====================
+			-- ==================== SCROLLING GRID ====================
 			local scroll_frame = library:create("ScrollingFrame", {
 				Parent = selector_bg,
 				Position = UDim2.new(0, 10, 0, 142),
@@ -5483,7 +5527,7 @@
 				ScrollBarThickness = 4
 			})
 
-			local grid_layout = library:create("UIGridLayout", {
+			library:create("UIGridLayout", {
 				Parent = scroll_frame,
 				CellSize = UDim2.new(0, 130, 0, 115),
 				CellPadding = UDim2.new(0, 8, 0, 8),
@@ -5497,7 +5541,7 @@
 					Parent = scroll_frame,
 					Size = UDim2.new(0, 130, 0, 115),
 					BorderSizePixel = 0,
-					BackgroundColor3 = themes.preset.outline
+					BackgroundColor3 = themes.preset.outline or Color3.fromRGB(40, 40, 40)
 				})
 
 				local card_inline = library:create("Frame", {
@@ -5505,7 +5549,7 @@
 					Position = UDim2.new(0, 1, 0, 1),
 					Size = UDim2.new(1, -2, 1, -2),
 					BorderSizePixel = 0,
-					BackgroundColor3 = themes.preset.inline
+					BackgroundColor3 = themes.preset.inline or Color3.fromRGB(20, 20, 20)
 				})
 
 				local card_btn = library:create("TextButton", {
@@ -5527,7 +5571,7 @@
 					}
 				})
 
-				local icon_img = library:create("ImageLabel", {
+				library:create("ImageLabel", {
 					Parent = card_btn,
 					Position = UDim2.new(0.5, -24, 0, 6),
 					Size = UDim2.new(0, 48, 0, 48),
@@ -5537,8 +5581,8 @@
 
 				local title_lbl = library:create("TextLabel", {
 					Parent = card_btn,
-					FontFace = library.font,
-					TextColor3 = themes.preset.text,
+					FontFace = library.font or Font.fromEnum(Enum.Font.SourceSans),
+					TextColor3 = themes.preset.text or Color3.fromRGB(255, 255, 255),
 					Text = gameData.name,
 					Position = UDim2.new(0, 4, 0, 58),
 					Size = UDim2.new(1, -8, 0, 48),
@@ -5551,15 +5595,16 @@
 				library:create("UIStroke", { Parent = title_lbl, LineJoinMode = Enum.LineJoinMode.Miter })
 
 				card_btn.MouseEnter:Connect(function()
-					card_outline.BackgroundColor3 = themes.preset.accent
+					card_outline.BackgroundColor3 = themes.preset.accent or Color3.fromRGB(255, 0, 0)
 				end)
 				card_btn.MouseLeave:Connect(function()
-					card_outline.BackgroundColor3 = themes.preset.outline
+					card_outline.BackgroundColor3 = themes.preset.outline or Color3.fromRGB(40, 40, 40)
 				end)
 
 				card_btn.MouseButton1Click:Connect(function()
+					print("[Debug game_selector] Card clicked:", gameData.name)
 					cfg.selected = gameData
-					selector_outline:Destroy()
+					pcall(function() selector_outline:Destroy() end)
 					cfg.callback(gameData)
 				end)
 
@@ -5577,6 +5622,7 @@
 				end
 			end)
 
+			print("[Debug game_selector] UI successfully built and returned.")
 			return cfg
 		end
 		function library:list(options)
