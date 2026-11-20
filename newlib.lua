@@ -834,7 +834,7 @@
 						TextColor3 = rgb(0, 0, 0),
 						BorderColor3 = rgb(0, 0, 0),
 						Text = "",
-						Size = dim2(0, 25, 0, 25),
+						Size = dim2(0, 225, 0, 25), -- Width: 25, Height: 25
 						BorderSizePixel = 0,
 						TextSize = 14,
 						BackgroundColor3 = themes.preset.inline
