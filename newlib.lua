@@ -112,7 +112,6 @@
 			["low_contrast"] = hex("#1E1E1E"),
 			["text"] = hex("#B4B4B4"),
 			["text_outline"] = rgb(0, 0, 0),
-			["glow"] = hex("#6078BE"), 
 		},
 
 		utility = {
@@ -139,9 +138,6 @@
 			["text_outline"] = {
 				["Color"] = {}, 	
 			},
-			["glow"] = {
-				["ImageColor3"] = {}, 	
-			}, 
 			["high_contrast"] = {
 				["BackgroundColor3"] = {},
 			},
@@ -829,24 +825,6 @@
 						PaddingRight = dim(0, 5),
 						PaddingLeft = dim(0, 5)
 					})
-					
-					items.glow = library:create("ImageLabel", {
-						Parent = items.main_holder,
-						Name = "",
-						ImageColor3 = themes.preset.glow,
-						ScaleType = Enum.ScaleType.Slice,
-						BorderColor3 = rgb(0, 0, 0),
-						BackgroundColor3 = rgb(255, 255, 255),
-						Visible = true,
-						Image = "http://www.roblox.com/asset/?id=18245826428",
-						BackgroundTransparency = 1,
-						ImageTransparency = 0.8, 
-						Position = dim2(0, -20, 0, -20),
-						Size = dim2(1, 40, 1, 40),
-						ZIndex = 2,
-						BorderSizePixel = 0,
-						SliceCenter = rect(vec2(21, 21), vec2(79, 79))
-					}) library:apply_theme(items.glow, "glow", "ImageColor3") 
 				-- 
 				
 				-- Button
@@ -1683,10 +1661,6 @@
 				:colorpicker({name = "Outline", color = themes.preset.text_outline, callback = function(color, alpha)
 					library:update_theme("text_outline", color)
 				end, flag = "Outline"})
-				section:label({name = "Glow"})
-				:colorpicker({name = "Glow", color = themes.preset.glow, callback = function(color, alpha)
-					library:update_theme("glow", color)
-				end, flag = "Glow"})
 				section:slider({name = "Blur Size", flag = "Blur Size", min = 0, max = 56, default = 15, interval = 1, callback = function(int)
 					if window.opened then 
 						blur.Size = int
