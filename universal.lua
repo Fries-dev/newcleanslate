@@ -208,19 +208,8 @@ end
 
 
 
--- Example: Toggle with audio
-Misc:toggle({
-    name = "Speed Boost",
-    flag = "speed_toggle",
-    default = false,
-    callback = function(state)
-        
-        local player = game:GetService("Players").LocalPlayer
-        if player.Character and player.Character:FindFirstChild("Humanoid") then
-            player.Character.Humanoid.WalkSpeed = state and 50 or 16
-        end
-    end
-})
+
+
 -- Spin Player Variables
 local spinning = false
 local spinConnection = nil
@@ -242,45 +231,13 @@ Misc:slider({
 Misc:toggle({
     name = "Silent aim",
     flag = "Silent_aim",
+    default = SETTINGS.silent.Enabled,
     callback = function(v)
-        spinning = state
-        
-        if spinning then
-            spinConnection = game:GetService("RunService").RenderStepped:Connect(function()
-                local character = game:GetService("Players").LocalPlayer.Character
-                if character and character:FindFirstChild("HumanoidRootPart") then
-                    local rootPart = character.HumanoidRootPart
-                    
-                    if isLocalMode then
-                        -- For a true client-side visual effect without network replication,
-                        -- you can manipulate local joints or visual orientation. 
-                        -- (Note: Direct CFrame changes on RootPart will always replicate due to network ownership).
-                        rootPart.CFrame = rootPart.CFrame * CFrame.Angles(0, math.rad(spinSpeed), 0)
-                    else
-                        -- Server-replicated spin logic
-                        rootPart.CFrame = rootPart.CFrame * CFrame.Angles(0, math.rad(spinSpeed), 0)
-                    end
-                end
-            end)
-        else
-            if spinConnection then
-                spinConnection:Disconnect()
-                spinConnection = nil
-            end
-        end
+        SETTINGS.silent.Enabled = v
     end
 })
 
-Misc:slider({
-    name = "Spin Speed",
-    flag = "spin_speed",
-    min = 1,
-    max = 50,
-    default = 10,
-    callback = function(value)
-        spinSpeed = value
-    end
-})
+
 
 -- 3. Main Spin Toggle
 Misc:toggle({
